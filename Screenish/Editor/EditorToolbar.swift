@@ -75,7 +75,6 @@ struct EditorToolbar: View {
             .buttonStyle(.bordered)
             .background(isSelected ? Color.accentColor.opacity(0.30) : Color.clear)
             .cornerRadius(6)
-            .help(tool.helpText)
             .onHover(perform: onHover)
         }
     }

@@ -51,11 +51,10 @@ final class CanvasNSView: NSView {
     private var outerSize: CGSize { bgLayout.outerSize }
     private var innerOrigin: CGPoint { bgLayout.innerOrigin }
 
-    /// Neutral margin around the composite (more breathing room with a background).
-    private var fitFactor: CGFloat { document.background.isEmpty ? 0.96 : 0.82 }
-
     private var scale: CGFloat {
-        let s = min(bounds.width / outerSize.width, bounds.height / outerSize.height) * fitFactor
+        // Fill the canvas with the composite so the background fills the area and
+        // the image stays as large as the padding allows (no extra neutral margin).
+        let s = min(bounds.width / outerSize.width, bounds.height / outerSize.height)
         return s.isFinite && s > 0 ? s : 1
     }
 
@@ -87,7 +86,8 @@ final class CanvasNSView: NSView {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
         let space = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
 
-        drawCheckerboard(ctx)
+        ctx.setFillColor(NSColor.underPageBackgroundColor.cgColor)
+        ctx.fill(bounds)
 
         // Composite (outer) space, top-left origin.
         ctx.saveGState()
@@ -147,25 +147,6 @@ final class CanvasNSView: NSView {
 
         drawCropOverlay(ctx)
         drawSelectionHandles(ctx)
-    }
-
-    /// Subtle checkerboard so the composite reads as a bounded image on a neutral field.
-    private func drawCheckerboard(_ ctx: CGContext) {
-        ctx.setFillColor(NSColor(white: 0.20, alpha: 1).cgColor)
-        ctx.fill(bounds)
-        ctx.setFillColor(NSColor(white: 0.26, alpha: 1).cgColor)
-        let s: CGFloat = 12
-        var row = 0
-        while CGFloat(row) * s < bounds.height {
-            var col = 0
-            while CGFloat(col) * s < bounds.width {
-                if (row + col) % 2 == 0 {
-                    ctx.fill(CGRect(x: CGFloat(col) * s, y: CGFloat(row) * s, width: s, height: s))
-                }
-                col += 1
-            }
-            row += 1
-        }
     }
 
     private func drawSelectionHandles(_ ctx: CGContext) {

@@ -9,7 +9,7 @@
 
 import AppKit
 
-enum BackgroundFill: Equatable {
+enum BackgroundFill: Equatable, Codable {
     case none
     case solid(NSColor)
     case gradient(GradientPreset)
@@ -20,6 +20,35 @@ enum BackgroundFill: Equatable {
         case let (.solid(a), .solid(b)): return a == b
         case let (.gradient(a), .gradient(b)): return a.id == b.id
         default: return false
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey { case kind, colorHex, gradient }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .none:
+            try c.encode("none", forKey: .kind)
+        case .solid(let color):
+            try c.encode("solid", forKey: .kind)
+            try c.encode(color.hexRGBA, forKey: .colorHex)
+        case .gradient(let preset):
+            try c.encode("gradient", forKey: .kind)
+            try c.encode(preset, forKey: .gradient)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        switch try c.decode(String.self, forKey: .kind) {
+        case "solid":
+            let hex = try c.decode(String.self, forKey: .colorHex)
+            self = .solid(NSColor(hexRGBA: hex) ?? .white)
+        case "gradient":
+            self = .gradient(try c.decode(GradientPreset.self, forKey: .gradient))
+        default:
+            self = .none
         }
     }
 }
@@ -51,7 +80,7 @@ enum AspectRatioOption: String, CaseIterable, Identifiable {
     }
 }
 
-struct BackgroundStyle: Equatable {
+struct BackgroundStyle: Equatable, Codable {
     var paddingFraction: CGFloat = 0        // 0…0.4 of the inner image's longest side
     var insetFraction: CGFloat = 0          // 0…0.1 colored frame between image and padding
     var insetColor: NSColor = .white
@@ -67,5 +96,62 @@ struct BackgroundStyle: Equatable {
     var isEmpty: Bool {
         fill == .none && paddingFraction == 0 && insetFraction == 0
             && cornerRadiusFraction == 0 && shadowOpacity == 0 && ratio == .auto
+    }
+
+    // MARK: - Codable (insetColor stored as a hex string)
+
+    private enum CodingKeys: String, CodingKey {
+        case paddingFraction, insetFraction, insetColorHex, cornerRadiusFraction
+        case shadowRadiusFraction, shadowOpacity, fill, ratio
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        paddingFraction = try c.decode(CGFloat.self, forKey: .paddingFraction)
+        insetFraction = try c.decode(CGFloat.self, forKey: .insetFraction)
+        insetColor = NSColor(hexRGBA: try c.decode(String.self, forKey: .insetColorHex)) ?? .white
+        cornerRadiusFraction = try c.decode(CGFloat.self, forKey: .cornerRadiusFraction)
+        shadowRadiusFraction = try c.decode(CGFloat.self, forKey: .shadowRadiusFraction)
+        shadowOpacity = try c.decode(CGFloat.self, forKey: .shadowOpacity)
+        fill = try c.decode(BackgroundFill.self, forKey: .fill)
+        ratio = try c.decode(AspectRatioOption.self, forKey: .ratio)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(paddingFraction, forKey: .paddingFraction)
+        try c.encode(insetFraction, forKey: .insetFraction)
+        try c.encode(insetColor.hexRGBA, forKey: .insetColorHex)
+        try c.encode(cornerRadiusFraction, forKey: .cornerRadiusFraction)
+        try c.encode(shadowRadiusFraction, forKey: .shadowRadiusFraction)
+        try c.encode(shadowOpacity, forKey: .shadowOpacity)
+        try c.encode(fill, forKey: .fill)
+        try c.encode(ratio, forKey: .ratio)
+    }
+}
+
+extension AspectRatioOption: Codable {}
+
+extension NSColor {
+    /// "#RRGGBBAA" in sRGB.
+    var hexRGBA: String {
+        let c = usingColorSpace(.sRGB) ?? self
+        let r = Int((c.redComponent * 255).rounded())
+        let g = Int((c.greenComponent * 255).rounded())
+        let b = Int((c.blueComponent * 255).rounded())
+        let a = Int((c.alphaComponent * 255).rounded())
+        return String(format: "#%02X%02X%02X%02X", r, g, b, a)
+    }
+
+    convenience init?(hexRGBA: String) {
+        var s = hexRGBA
+        if s.hasPrefix("#") { s.removeFirst() }
+        guard s.count == 8, let v = UInt32(s, radix: 16) else { return nil }
+        self.init(srgbRed: CGFloat((v >> 24) & 0xFF) / 255,
+                  green: CGFloat((v >> 16) & 0xFF) / 255,
+                  blue: CGFloat((v >> 8) & 0xFF) / 255,
+                  alpha: CGFloat(v & 0xFF) / 255)
     }
 }

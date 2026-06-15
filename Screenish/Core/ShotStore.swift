@@ -19,9 +19,14 @@ final class ShotStore: ObservableObject {
     @discardableResult
     func add(_ capturedImage: CGImage) -> Shot? {
         let id = UUID()
+        let background = Prefs.defaultBackground   // remembered beautify
+        let rendered = background.isEmpty ? capturedImage
+            : (EditorRenderer.renderComposite(base: capturedImage, annotations: [],
+                                              cropRect: nil, background: background) ?? capturedImage)
         do {
-            let url = try ImageExport.writeTemp(capturedImage, id: id)
-            let shot = Shot(id: id, baseImage: capturedImage, cgImage: capturedImage, tempURL: url)
+            let url = try ImageExport.writeTemp(rendered, id: id)
+            let shot = Shot(id: id, baseImage: capturedImage, background: background,
+                            cgImage: rendered, tempURL: url)
             shots.insert(shot, at: 0)
             return shot
         } catch {

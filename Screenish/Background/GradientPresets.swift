@@ -7,13 +7,27 @@
 
 import AppKit
 
-struct GradientPreset: Identifiable, Equatable, Hashable {
+struct GradientPreset: Identifiable, Equatable, Hashable, Codable {
     let id: String
     let colors: [NSColor]
     let angle: Double   // degrees, 0 = left→right
 
     static func == (lhs: GradientPreset, rhs: GradientPreset) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
+
+    // Persist by id only; rehydrate colors/angle from the preset table.
+    init(id: String, colors: [NSColor], angle: Double) {
+        self.id = id; self.colors = colors; self.angle = angle
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        let id = try c.decode(String.self)
+        self = GradientPresets.all.first { $0.id == id } ?? GradientPresets.all[0]
+    }
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        try c.encode(id)
+    }
 }
 
 enum GradientPresets {

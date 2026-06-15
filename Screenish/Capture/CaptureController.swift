@@ -107,7 +107,12 @@ final class CaptureController {
         config.width = Int((screen.frame.width * scale).rounded())
         config.height = Int((screen.frame.height * scale).rounded())
         config.showsCursor = false
-        let filter = SCContentFilter(display: display, excludingWindows: [])
+        // Exclude our own windows (selection overlay dimming, stack panel, editor)
+        // so they never end up in the capture.
+        let ownApps = content.applications.filter { $0.processID == getpid() }
+        let filter = SCContentFilter(display: display,
+                                     excludingApplications: ownApps,
+                                     exceptingWindows: [])
         return await screenshot(filter: filter, config: config)
     }
 

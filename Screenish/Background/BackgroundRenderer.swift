@@ -119,8 +119,12 @@ enum BackgroundRenderer {
             let half = (abs(dx) * rect.width + abs(dy) * rect.height) / 2
             let start = CGPoint(x: cx - dx * half, y: cy - dy * half)
             let end = CGPoint(x: cx + dx * half, y: cy + dy * half)
+            // Clip to the rect — drawsBefore/After otherwise floods the whole context.
+            ctx.saveGState()
+            ctx.clip(to: rect)
             ctx.drawLinearGradient(gradient, start: start, end: end,
                                    options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+            ctx.restoreGState()
         }
     }
 }

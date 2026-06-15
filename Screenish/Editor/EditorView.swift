@@ -11,6 +11,9 @@ struct EditorView: View {
     @ObservedObject var document: EditorDocument
     var onDone: ([Annotation], CGRect?, BackgroundStyle) -> Void
     var onClose: () -> Void
+    var onDragWillBegin: () -> Void = {}
+    var onDragRestore: () -> Void = {}
+    var onDragDelivered: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 0) {
@@ -44,27 +47,16 @@ struct EditorView: View {
         .onExitCommand { onClose() }   // Esc hides the editor; shot stays in the stack
     }
 
-    /// A grab handle that drags the current (rendered) image into other apps.
+    /// A grab handle (self-contained AppKit drag source) that drags the current
+    /// rendered image into other apps.
     private var dragHandle: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "hand.draw")
-            Text("Drag")
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color.secondary.opacity(0.15))
-        .cornerRadius(8)
-        .onDrag {
-            // Snapshot first; defer the store mutation out of the gesture/update
-            // cycle to avoid SwiftUI reentrancy. Close once the drop lands.
-            let image = render() ?? document.baseImage
-            let annotations = document.annotations
-            let crop = document.cropRect
-            let bg = document.background
-            DispatchQueue.main.async { onDone(annotations, crop, bg) }
-            return ShotDrag.itemProvider(image: image, date: document.shot.createdAt,
-                                         onDelivered: { onClose() })
-        }
+        DragOutHandle(
+            renderImage: { render() },
+            date: document.shot.createdAt,
+            onWillBegin: onDragWillBegin,
+            onDelivered: onDragDelivered,
+            onCancelled: onDragRestore)
+        .frame(width: 86, height: 28)
         .help(String(localized: "Drag the image into another app"))
     }
 
@@ -75,9 +67,11 @@ struct EditorView: View {
     }
 
     private func save() {
-        guard let image = render(),
-              let url = ImageExport.write(image, to: Prefs.saveLocation) else { return }
-        NSWorkspace.shared.activateFileViewerSelecting([url])
+        if let image = render(),
+           let url = ImageExport.write(image, to: Prefs.saveLocation) {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        }
+        done()   // persist edits + close the editor
     }
 
     private func done() {

@@ -17,16 +17,16 @@ struct InspectorPanel: View {
                 Text("Background")
                     .font(.headline)
 
-                backgroundPicker
-                slider("Padding", value: paddingBinding, range: 0...0.25)
-                insetRow
+                paddingRow
                 slider("Corner Radius", value: cornerBinding, range: 0...0.2)
                 slider("Shadow", value: shadowBinding, range: 0...0.8)
+                backgroundPicker
                 ratioPicker
             }
-            .padding(14)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
         }
-        .frame(width: 220)
+        .frame(width: 248)
     }
 
     // MARK: - Background fill
@@ -40,11 +40,6 @@ struct InspectorPanel: View {
                 ForEach(GradientPresets.all) { preset in
                     gradientSwatch(preset)
                 }
-            }
-            HStack {
-                Text("Solid")
-                Spacer()
-                ColorPicker("", selection: solidColorBinding).labelsHidden()
             }
         }
     }
@@ -64,10 +59,17 @@ struct InspectorPanel: View {
         .help(String(localized: "No background"))
     }
 
+    /// A thin, adjustable border so a newly chosen background is visible
+    /// without forcing a big default — drag Padding to 0 to remove it.
+    private func ensureVisiblePadding() {
+        if document.background.paddingFraction == 0 { document.background.paddingFraction = 0.04 }
+    }
+
     private func gradientSwatch(_ preset: GradientPreset) -> some View {
         Button {
             document.beginInteraction()
             document.background.fill = .gradient(preset)
+            ensureVisiblePadding()
         } label: {
             RoundedRectangle(cornerRadius: 6)
                 .fill(LinearGradient(colors: preset.colors.map { Color(nsColor: $0) },
@@ -94,14 +96,17 @@ struct InspectorPanel: View {
         }
     }
 
-    private var insetRow: some View {
+    /// Fine-grained padding slider over a small amount range (no percentage,
+    /// gentle increments) with a numeric readout.
+    private var paddingRow: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Inset").font(.subheadline).foregroundStyle(.secondary)
+                Text("Padding").font(.subheadline).foregroundStyle(.secondary)
                 Spacer()
-                ColorPicker("", selection: insetColorBinding).labelsHidden()
+                Text("\(Int(paddingSliderBinding.wrappedValue.rounded()))")
+                    .font(.caption).monospacedDigit().foregroundStyle(.tertiary)
             }
-            Slider(value: insetBinding, in: 0...0.06) { editing in
+            Slider(value: paddingSliderBinding, in: 0...100) { editing in
                 if editing { document.beginInteraction() }
             }
         }
@@ -112,7 +117,13 @@ struct InspectorPanel: View {
     private func slider(_ title: LocalizedStringKey, value: Binding<Double>,
                         range: ClosedRange<Double>) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.subheadline).foregroundStyle(.secondary)
+            HStack {
+                Text(title).font(.subheadline).foregroundStyle(.secondary)
+                Spacer()
+                Text("\(Int((value.wrappedValue / range.upperBound * 100).rounded()))%")
+                    .font(.caption).foregroundStyle(.tertiary)
+                    .monospacedDigit()
+            }
             Slider(value: value, in: range) { editing in
                 if editing { document.beginInteraction() }
             }
@@ -126,17 +137,10 @@ struct InspectorPanel: View {
         document.background.fill == .gradient(preset)
     }
 
-    private var paddingBinding: Binding<Double> {
-        Binding(get: { Double(document.background.paddingFraction) },
-                set: { document.background.paddingFraction = CGFloat($0) })
-    }
-    private var insetBinding: Binding<Double> {
-        Binding(get: { Double(document.background.insetFraction) },
-                set: { document.background.insetFraction = CGFloat($0) })
-    }
-    private var insetColorBinding: Binding<Color> {
-        Binding(get: { Color(nsColor: document.background.insetColor) },
-                set: { document.beginInteraction(); document.background.insetColor = NSColor($0) })
+    /// Unitless 0…100 amount mapped to a small fraction (100 ≈ 0.13 of longest side).
+    private var paddingSliderBinding: Binding<Double> {
+        Binding(get: { Double(document.background.paddingFraction * 750) },
+                set: { document.background.paddingFraction = CGFloat($0) / 750 })
     }
     private var cornerBinding: Binding<Double> {
         Binding(get: { Double(document.background.cornerRadiusFraction) },
@@ -149,18 +153,5 @@ struct InspectorPanel: View {
     private var ratioBinding: Binding<AspectRatioOption> {
         Binding(get: { document.background.ratio },
                 set: { document.beginInteraction(); document.background.ratio = $0 })
-    }
-    private var solidColorBinding: Binding<Color> {
-        Binding(
-            get: {
-                if case let .solid(color) = document.background.fill {
-                    return Color(nsColor: color)
-                }
-                return .white
-            },
-            set: {
-                document.beginInteraction()
-                document.background.fill = .solid(NSColor($0))
-            })
     }
 }

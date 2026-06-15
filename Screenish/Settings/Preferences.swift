@@ -14,6 +14,7 @@ enum Prefs {
     static let compressJPEGKey = "compressJPEG"
     static let launchAtLoginKey = "launchAtLogin"
     static let removeAfterDragKey = "removeAfterDrag"
+    static let defaultBackgroundKey = "defaultBackgroundStyle"
 
     /// Register defaults that differ from the zero value (hideAtLaunch is on).
     static func registerDefaults() {
@@ -46,6 +47,28 @@ enum Prefs {
 
     static var removeAfterDrag: Bool {
         UserDefaults.standard.bool(forKey: removeAfterDragKey)
+    }
+
+    /// Remembered beautify style, applied to new captures and updated on each edit.
+    /// First run defaults to a gentle gradient with a little padding.
+    static var defaultBackground: BackgroundStyle {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: defaultBackgroundKey),
+                  let style = try? JSONDecoder().decode(BackgroundStyle.self, from: data)
+            else {
+                var style = BackgroundStyle()
+                if let preset = GradientPresets.all.first { style.fill = .gradient(preset) }
+                style.paddingFraction = 0.06
+                style.cornerRadiusFraction = 0.03
+                return style
+            }
+            return style
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                UserDefaults.standard.set(data, forKey: defaultBackgroundKey)
+            }
+        }
     }
 
     /// The export format implied by the compress-to-JPG preference.
