@@ -2,23 +2,31 @@
 //  ContentView.swift
 //  Screenish
 //
-//  Created by Thomas Strömberg on 2026-06-15.
+//  The tray menu shown from the MenuBarExtra.
 //
 
 import SwiftUI
+import KeyboardShortcuts
 
-struct ContentView: View {
+struct MenuContent: View {
+    private let coordinator = AppCoordinator.shared
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
+        Button("Capture Area") { coordinator.run(.region) }
+            .keyboardShortcut("1", modifiers: [.control, .shift])
+        Button("Capture Window") { coordinator.run(.window) }
+            .keyboardShortcut("2", modifiers: [.control, .shift])
+        Button("Capture Full Screen") { coordinator.run(.screen) }
+            .keyboardShortcut("3", modifiers: [.control, .shift])
 
-#Preview {
-    ContentView()
+        Divider()
+
+        SettingsLink {
+            Text("Settings…")
+        }
+        .keyboardShortcut(",", modifiers: .command)
+
+        Button("Quit Screenish") { NSApp.terminate(nil) }
+            .keyboardShortcut("q", modifiers: .command)
+    }
 }

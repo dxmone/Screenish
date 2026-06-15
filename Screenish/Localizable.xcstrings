@@ -1,0 +1,465 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "" : {
+
+    },
+    "Aspect Ratio" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Bildförhållande" } } }
+    },
+    "Auto" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Auto" } } }
+    },
+    "Background" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Bakgrund" } } }
+    },
+    "Corner Radius" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Hörnradie" } } }
+    },
+    "Fill" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Fyllning" } } }
+    },
+    "Inset" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Inramning" } } }
+    },
+    "No background" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Ingen bakgrund" } } }
+    },
+    "Padding" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Marginal" } } }
+    },
+    "Shadow" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Skugga" } } }
+    },
+    "Solid" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Enfärgad" } } }
+    },
+    "Add text" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Lägg till text" } } }
+    },
+    "Apply edits and update the shot in the stack" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Tillämpa ändringar och uppdatera bilden i stacken" } } }
+    },
+    "Blur an area to hide sensitive info" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Gör ett område oskarpt för att dölja känslig info" } } }
+    },
+    "Color" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Färg" } } }
+    },
+    "Copy the image to the clipboard" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Kopiera bilden till urklipp" } } }
+    },
+    "Crop the image" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Beskär bilden" } } }
+    },
+    "Delete selected" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Ta bort markerat" } } }
+    },
+    "Drag" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Dra" } } }
+    },
+    "Drag the image into another app" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Dra bilden till en annan app" } } }
+    },
+    "Draw a filled rectangle" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Rita en fylld rektangel" } } }
+    },
+    "Draw a line" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Rita en linje" } } }
+    },
+    "Draw a rectangle outline" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Rita en rektangelkontur" } } }
+    },
+    "Draw an arrow" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Rita en pil" } } }
+    },
+    "Draw an ellipse or circle" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Rita en ellips eller cirkel" } } }
+    },
+    "Highlight an area (marker)" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Markera ett område (överstrykning)" } } }
+    },
+    "Pixelate an area to hide sensitive info" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Pixelera ett område för att dölja känslig info" } } }
+    },
+    "Redo" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Gör om" } } }
+    },
+    "Save the image to your folder" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Spara bilden till din mapp" } } }
+    },
+    "Select and move objects" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Markera och flytta objekt" } } }
+    },
+    "Thickness" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Tjocklek" } } }
+    },
+    "Undo" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Ångra" } } }
+    },
+    "Always hide window at launch" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dölj alltid fönster vid start"
+          }
+        }
+      }
+    },
+    "Arrow" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pil"
+          }
+        }
+      }
+    },
+    "Blur" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oskärpa"
+          }
+        }
+      }
+    },
+    "Capture Area" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fånga område"
+          }
+        }
+      }
+    },
+    "Capture Full Screen" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fånga hel skärm"
+          }
+        }
+      }
+    },
+    "Capture Window" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fånga fönster"
+          }
+        }
+      }
+    },
+    "Choose…" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Välj…"
+          }
+        }
+      }
+    },
+    "Compress to JPG when saving" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Komprimera till JPG vid sparning"
+          }
+        }
+      }
+    },
+    "Copy" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kopiera"
+          }
+        }
+      }
+    },
+    "Crop" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beskär"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klar"
+          }
+        }
+      }
+    },
+    "Edit Screenshot" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redigera skärmbild"
+          }
+        }
+      }
+    },
+    "Ellipse" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ellips"
+          }
+        }
+      }
+    },
+    "Filled Rectangle" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fylld rektangel"
+          }
+        }
+      }
+    },
+    "General" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allmänt"
+          }
+        }
+      }
+    },
+    "Highlight" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Markering"
+          }
+        }
+      }
+    },
+    "Language" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Språk"
+          }
+        }
+      }
+    },
+    "Later" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senare"
+          }
+        }
+      }
+    },
+    "Launch at login" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starta vid inloggning"
+          }
+        }
+      }
+    },
+    "Line" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linje"
+          }
+        }
+      }
+    },
+    "Pixelate" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pixelera"
+          }
+        }
+      }
+    },
+    "Quit Screenish" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avsluta Screenish"
+          }
+        }
+      }
+    },
+    "Rectangle" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rektangel"
+          }
+        }
+      }
+    },
+    "Relaunch now" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starta om nu"
+          }
+        }
+      }
+    },
+    "Remove" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta bort"
+          }
+        }
+      }
+    },
+    "Remove from stack after drag and drop" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta bort från stacken efter drag-och-släpp"
+          }
+        }
+      }
+    },
+    "Restart required" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Omstart krävs"
+          }
+        }
+      }
+    },
+    "Restart Screenish to apply the new language." : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starta om Screenish för att tillämpa det nya språket."
+          }
+        }
+      }
+    },
+    "Save" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spara"
+          }
+        }
+      }
+    },
+    "Save to" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spara till"
+          }
+        }
+      }
+    },
+    "Save to Folder" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spara till mapp"
+          }
+        }
+      }
+    },
+    "Screenish" : {
+
+    },
+    "Select" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Markera"
+          }
+        }
+      }
+    },
+    "Settings…" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inställningar…"
+          }
+        }
+      }
+    },
+    "Shortcuts" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kortkommandon"
+          }
+        }
+      }
+    },
+    "System" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System"
+          }
+        }
+      }
+    },
+    "Text" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
