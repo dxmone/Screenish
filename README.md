@@ -1,6 +1,6 @@
 # Screenish
 
-A macOS menu-bar screenshot app — a blend of Xnapper and CleanShotX.
+A macOS menu-bar screenshot app, inspired by Xnapper and CleanShotX.
 
 ## Features
 
