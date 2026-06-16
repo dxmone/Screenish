@@ -24,6 +24,8 @@ struct MenuContent: View {
         Button("Settings…") { SettingsWindow.open() }
             .keyboardShortcut(",", modifiers: .command)
 
+        Button("Reveal Crash Logs") { CrashReporter.revealInFinder() }
+
         Button("Quit Screenish") { NSApp.terminate(nil) }
             .keyboardShortcut("q", modifiers: .command)
     }

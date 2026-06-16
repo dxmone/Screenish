@@ -123,7 +123,7 @@ final class DragSourceNSView: NSView, NSDraggingSource {
                              y: bounds.midY - thumb.size.height / 2)
         item.setDraggingFrame(NSRect(origin: origin, size: thumb.size), contents: thumb)
 
-        Log.drag.log("begin drag session: \(url.lastPathComponent, privacy: .public)")
+        Log.breadcrumb("drag begin: \(url.lastPathComponent)")
         beginDraggingSession(with: [item], event: event, source: self)
     }
 
@@ -149,10 +149,10 @@ final class DragSourceNSView: NSView, NSDraggingSource {
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint,
                          operation: NSDragOperation) {
         if operation.isEmpty {
-            Log.drag.log("drag cancelled")
+            Log.breadcrumb("drag cancelled")
             onCancelled?()
         } else {
-            Log.drag.log("drag delivered: \(operation.rawValue)")
+            Log.breadcrumb("drag delivered: \(operation.rawValue)")
             onDelivered?()
         }
     }

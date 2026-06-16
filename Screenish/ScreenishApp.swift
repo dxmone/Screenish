@@ -8,6 +8,7 @@
 
 import SwiftUI
 import OSLog
+import UserNotifications
 import KeyboardShortcuts
 
 @main
@@ -33,13 +34,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Prefs.registerDefaults()
         AppCoordinator.shared.start()
 
+        if CrashReporter.lastSessionCrashed {
+            notifyPreviousCrash()
+        }
         if !Prefs.hideAtLaunch {
             SettingsWindow.open()
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        CrashReporter.markCleanShutdown()
         AppCoordinator.shared.store.cleanupTempDirectory()
+    }
+
+    // MARK: - Crash notification
+
+    /// The previous session died without a clean shutdown. Tell the user so they
+    /// can grab the report; tapping it reveals the crash-log folder. If notifs are
+    /// unavailable, the tray menu's "Reveal Crash Logs" is the guaranteed path.
+    private func notifyPreviousCrash() {
+        let center = UNUserNotificationCenter.current()
+        center.delegate = AppDelegate.notificationDelegate
+        center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = String(localized: "Screenish crashed last session")
+            content.body = String(localized: "Click to reveal the crash log so you can share it.")
+            let request = UNNotificationRequest(
+                identifier: "screenish.crash", content: content, trigger: nil)
+            center.add(request)
+        }
+    }
+
+    static let notificationDelegate = CrashNotificationDelegate()
+}
+
+/// Reveals the crash-log folder when the crash notification is tapped, and lets it
+/// show even while the app is frontmost.
+final class CrashNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler:
+                                @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        CrashReporter.revealInFinder()
+        completionHandler()
     }
 }
 
@@ -73,9 +117,14 @@ final class AppCoordinator {
             return
         }
         isCapturing = true
+        Log.breadcrumb("capture begin: \(mode)")
         Task { @MainActor in
             defer { isCapturing = false }
-            guard let cgImage = await capture.capture(mode) else { return }
+            guard let cgImage = await capture.capture(mode) else {
+                Log.breadcrumb("capture end: no image (\(mode))")
+                return
+            }
+            Log.breadcrumb("capture end: got image (\(mode))")
             if let shot = store.add(cgImage) {
                 Pasteboard.copy(shot.cgImage)   // rendered (incl. remembered beautify)
                 if Prefs.openEditorAfterCapture {
@@ -89,7 +138,7 @@ final class AppCoordinator {
 
     /// Open (or focus) the annotation editor for a Shot.
     func openEditor(for shot: Shot) {
-        Log.general.log("openEditor \(shot.id, privacy: .public) existing=\(self.editors[shot.id] != nil)")
+        Log.breadcrumb("openEditor \(shot.id) existing=\(self.editors[shot.id] != nil)")
         if let existing = editors[shot.id] {
             existing.show()
             return
