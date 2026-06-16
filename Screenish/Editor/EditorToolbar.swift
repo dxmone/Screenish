@@ -34,6 +34,17 @@ struct EditorToolbar: View {
                 .frame(width: 90)
                 .onHover { setHelp(String(localized: "Thickness"), $0) }
 
+                if showArrowStyle {
+                    Picker("", selection: arrowStyleBinding) {
+                        Image(systemName: "arrow.up.right").tag(ArrowStyle.straight)
+                        Image(systemName: "arrow.turn.right.up").tag(ArrowStyle.curved)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(width: 80)
+                    .onHover { setHelp(String(localized: "Arrow style"), $0) }
+                }
+
                 Divider().frame(height: 20)
 
                 Button { document.undo() } label: { Image(systemName: "arrow.uturn.backward") }
@@ -90,6 +101,18 @@ struct EditorToolbar: View {
         Binding(
             get: { Double(document.style.lineWidth) },
             set: { document.style.lineWidth = CGFloat($0); document.applyStyleToSelection() }
+        )
+    }
+
+    /// Show the arrow-style picker when the arrow tool or an arrow is selected.
+    private var showArrowStyle: Bool {
+        document.tool == .arrow || document.selected?.kind == .arrow
+    }
+
+    private var arrowStyleBinding: Binding<ArrowStyle> {
+        Binding(
+            get: { document.selected?.style.arrowStyle ?? document.style.arrowStyle },
+            set: { document.style.arrowStyle = $0; document.applyStyleToSelection() }
         )
     }
 }

@@ -40,6 +40,9 @@
         }
       }
     },
+    "Add a numbered step marker" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Lägg till en numrerad stegmarkör" } } }
+    },
     "Arrow" : {
       "localizations" : {
         "sv" : {
@@ -49,6 +52,24 @@
           }
         }
       }
+    },
+    "Arrow style" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Pilstil" } } }
+    },
+    "Counter" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Räknare" } } }
+    },
+    "Draw freehand" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Rita på fri hand" } } }
+    },
+    "Pencil" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Penna" } } }
+    },
+    "Spotlight" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Strålkastare" } } }
+    },
+    "Spotlight an area (darken the rest)" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Lyft fram ett område (mörka resten)" } } }
     },
     "Aspect Ratio" : {
       "localizations" : {

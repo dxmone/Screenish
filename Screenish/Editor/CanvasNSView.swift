@@ -188,6 +188,8 @@ final class CanvasNSView: NSView {
         if a.kind.isLinear {
             return [(.startPoint, a.start), (.endPoint, a.end)]
         }
+        // Counter (point) and pencil (path) are move-only — no resize handles.
+        if a.kind == .counter || a.kind.isPath { return [] }
         let r = a.rect
         return [
             (.topLeft, CGPoint(x: r.minX, y: r.minY)),
@@ -215,10 +217,18 @@ final class CanvasNSView: NSView {
         let tolerance = 6 / scale
         for annotation in document.annotations.reversed() {
             if annotation.kind.isLinear {
-                if distanceToSegment(imgPoint, annotation.start, annotation.end) <= max(tolerance, annotation.style.lineWidth) {
+                if distanceToSegment(imgPoint, annotation.start, annotation.end)
+                    <= max(tolerance, annotation.style.lineWidth) {
                     return annotation
                 }
-            } else if annotation.rect.insetBy(dx: -tolerance, dy: -tolerance).contains(imgPoint) {
+            } else if annotation.kind == .counter {
+                let radius = max(annotation.style.lineWidth * 2.2, 14)
+                if hypot(imgPoint.x - annotation.start.x, imgPoint.y - annotation.start.y)
+                    <= radius + tolerance {
+                    return annotation
+                }
+            } else if annotation.boundingRect.insetBy(dx: -tolerance, dy: -tolerance)
+                .contains(imgPoint) {
                 return annotation
             }
         }
@@ -272,9 +282,25 @@ final class CanvasNSView: NSView {
             return
         }
 
+        // Counter → single click places a numbered marker (no drag).
+        if document.tool == .counter {
+            let number = document.annotations.filter { $0.kind == .counter }.count + 1
+            let counter = Annotation(kind: .counter, start: p, end: p,
+                                     style: document.style, number: number)
+            document.add(counter)
+            dragMode = .none
+            needsDisplay = true
+            return
+        }
+
         // Shape tools → start a draft.
         if let kind = document.tool.annotationKind {
-            draft = Annotation(kind: kind, start: p, end: p, style: document.style)
+            if kind == .pencil {
+                draft = Annotation(kind: .pencil, start: p, end: p,
+                                   style: document.style, points: [p])
+            } else {
+                draft = Annotation(kind: kind, start: p, end: p, style: document.style)
+            }
             dragMode = .create
         }
     }
@@ -285,7 +311,12 @@ final class CanvasNSView: NSView {
         case .none:
             break
         case .create:
-            draft?.end = p
+            if draft?.kind.isPath == true {
+                draft?.points.append(p)
+                draft?.end = p
+            } else {
+                draft?.end = p
+            }
             needsDisplay = true
         case .crop:
             cropDraft = CGRect(x: min(dragStartImage.x, p.x), y: min(dragStartImage.y, p.y),
@@ -310,9 +341,14 @@ final class CanvasNSView: NSView {
         case .create:
             if var d = draft {
                 let r = d.rect
-                let bigEnough = d.kind.isLinear
-                    ? hypot(d.end.x - d.start.x, d.end.y - d.start.y) >= 5
-                    : (r.width >= 5 && r.height >= 5)
+                let bigEnough: Bool
+                if d.kind.isPath {
+                    bigEnough = d.points.count >= 2
+                } else if d.kind.isLinear {
+                    bigEnough = hypot(d.end.x - d.start.x, d.end.y - d.start.y) >= 5
+                } else {
+                    bigEnough = r.width >= 5 && r.height >= 5
+                }
                 if bigEnough {
                     d.style = document.style
                     document.add(d)

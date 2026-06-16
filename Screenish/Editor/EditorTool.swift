@@ -18,6 +18,9 @@ enum EditorTool: String, CaseIterable, Identifiable {
     case text
     case blur
     case pixelate
+    case counter
+    case spotlight
+    case pencil
     case crop
 
     var id: String { rawValue }
@@ -34,6 +37,9 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .text:            return "textformat"
         case .blur:            return "drop.fill"
         case .pixelate:        return "mosaic"
+        case .counter:         return "1.circle.fill"
+        case .spotlight:       return "circle.dashed.inset.filled"
+        case .pencil:          return "pencil.tip"
         case .crop:            return "crop"
         }
     }
@@ -50,6 +56,9 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .text:            return String(localized: "Text")
         case .blur:            return String(localized: "Blur")
         case .pixelate:        return String(localized: "Pixelate")
+        case .counter:         return String(localized: "Counter")
+        case .spotlight:       return String(localized: "Spotlight")
+        case .pencil:          return String(localized: "Pencil")
         case .crop:            return String(localized: "Crop")
         }
     }
@@ -67,6 +76,9 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .text:            return String(localized: "Add text")
         case .blur:            return String(localized: "Blur an area to hide sensitive info")
         case .pixelate:        return String(localized: "Pixelate an area to hide sensitive info")
+        case .counter:         return String(localized: "Add a numbered step marker")
+        case .spotlight:       return String(localized: "Spotlight an area (darken the rest)")
+        case .pencil:          return String(localized: "Draw freehand")
         case .crop:            return String(localized: "Crop the image")
         }
     }
@@ -84,6 +96,9 @@ enum EditorTool: String, CaseIterable, Identifiable {
         case .text:            return .text
         case .blur:            return .blur
         case .pixelate:        return .pixelate
+        case .counter:         return .counter
+        case .spotlight:       return .spotlight
+        case .pencil:          return .pencil
         }
     }
 }

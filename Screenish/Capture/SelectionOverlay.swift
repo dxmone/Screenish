@@ -36,6 +36,7 @@ final class SelectionOverlayController {
         // and tear down any previous session first.
         if let leftover = continuation {
             continuation = nil
+            NSCursor.pop() // balance the crosshair push() of the leaked session
             windows.forEach { $0.orderOut(nil) }
             windows.removeAll()
             views.removeAll()
@@ -72,7 +73,11 @@ final class SelectionOverlayController {
             }
             NSApp.activate(ignoringOtherApps: true)
             windows.first?.makeKey()
-            NSCursor.crosshair.set()
+            // Hold the crosshair on the cursor stack for the overlay's lifetime.
+            // A one-shot set() races the async activation and is overwritten when
+            // the window isn't yet key; push() survives that gap. Balanced by
+            // NSCursor.pop() in finish().
+            NSCursor.crosshair.push()
         }
     }
 
@@ -131,6 +136,7 @@ final class SelectionOverlayController {
     private func redraw() { views.forEach { $0.needsDisplay = true } }
 
     private func finish(_ result: OverlayResult) {
+        NSCursor.pop() // balance the crosshair push() in present()
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
         views.removeAll()
@@ -165,13 +171,19 @@ final class SelectionView: NSView {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
         addTrackingArea(NSTrackingArea(rect: bounds,
-            options: [.activeAlways, .mouseMoved, .inVisibleRect],
+            options: [.activeAlways, .mouseMoved, .mouseEnteredAndExited,
+                      .cursorUpdate, .inVisibleRect],
             owner: self, userInfo: nil))
     }
 
     override func resetCursorRects() {
         addCursorRect(bounds, cursor: .crosshair)
     }
+
+    // Crosshair is set from every AppKit cursor path so that whichever fires first
+    // wins, independent of when the overlay becomes key (see push() in present()).
+    override func cursorUpdate(with event: NSEvent) { NSCursor.crosshair.set() }
+    override func mouseEntered(with event: NSEvent) { NSCursor.crosshair.set() }
 
     // MARK: - Coordinates
 
@@ -191,6 +203,7 @@ final class SelectionView: NSView {
     }
 
     override func mouseDragged(with event: NSEvent) {
+        NSCursor.crosshair.set()
         controller?.dragged(to: localPoint(event))
     }
 
@@ -199,6 +212,7 @@ final class SelectionView: NSView {
     }
 
     override func mouseMoved(with event: NSEvent) {
+        NSCursor.crosshair.set()
         controller?.moved(to: localPoint(event))
     }
 

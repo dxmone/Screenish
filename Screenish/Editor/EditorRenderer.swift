@@ -27,6 +27,9 @@ enum AnnotationDrawer {
         case .highlight:       drawHighlight(a, in: ctx)
         case .text:            drawText(a, in: ctx)
         case .blur, .pixelate: drawRedaction(a, in: ctx, base: base)
+        case .counter:         drawCounter(a, in: ctx)
+        case .spotlight:       drawSpotlight(a, in: ctx, base: base)
+        case .pencil:          drawPencil(a, in: ctx)
         }
     }
 
@@ -60,10 +63,6 @@ enum AnnotationDrawer {
         let headLength = min(max(w * 3.5, 18), length)
         let headHalfWidth = w * 1.6
 
-        // Base of the head (where the shaft ends).
-        let baseX = tip.x - ux * headLength
-        let baseY = tip.y - uy * headLength
-
         ctx.saveGState()
         ctx.setStrokeColor(a.style.color.cgColor)
         ctx.setFillColor(a.style.color.cgColor)
@@ -71,19 +70,116 @@ enum AnnotationDrawer {
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
 
-        // Shaft: tail → base of head.
-        ctx.move(to: tail)
-        ctx.addLine(to: CGPoint(x: baseX, y: baseY))
-        ctx.strokePath()
+        // Direction of the head: along the tangent at the tip (perpendicular
+        // offset for curved arrows so the head aligns with the curve).
+        var headUx = ux, headUy = uy
 
-        // Filled triangle head.
-        let left = CGPoint(x: baseX + px * headHalfWidth, y: baseY + py * headHalfWidth)
-        let right = CGPoint(x: baseX - px * headHalfWidth, y: baseY - py * headHalfWidth)
+        if a.style.arrowStyle == .curved {
+            // Quadratic bezier bowed perpendicular from the midpoint.
+            let mid = CGPoint(x: (tail.x + tip.x) / 2, y: (tail.y + tip.y) / 2)
+            let bow = length * 0.22
+            let control = CGPoint(x: mid.x + px * bow, y: mid.y + py * bow)
+            let base = CGPoint(x: tip.x - ux * headLength, y: tip.y - uy * headLength)
+            ctx.move(to: tail)
+            ctx.addQuadCurve(to: base, control: control)
+            ctx.strokePath()
+            // Tangent at the tip ≈ direction from control to tip.
+            let tdx = tip.x - control.x, tdy = tip.y - control.y
+            let tlen = max(hypot(tdx, tdy), 1)
+            headUx = tdx / tlen; headUy = tdy / tlen
+        } else {
+            let base = CGPoint(x: tip.x - ux * headLength, y: tip.y - uy * headLength)
+            ctx.move(to: tail)
+            ctx.addLine(to: base)
+            ctx.strokePath()
+        }
+
+        // Filled triangle head, oriented along headU.
+        let hpx = -headUy, hpy = headUx
+        let baseX = tip.x - headUx * headLength
+        let baseY = tip.y - headUy * headLength
+        let left = CGPoint(x: baseX + hpx * headHalfWidth, y: baseY + hpy * headHalfWidth)
+        let right = CGPoint(x: baseX - hpx * headHalfWidth, y: baseY - hpy * headHalfWidth)
         ctx.move(to: tip)
         ctx.addLine(to: left)
         ctx.addLine(to: right)
         ctx.closePath()
         ctx.fillPath()
+        ctx.restoreGState()
+    }
+
+    private static func drawPencil(_ a: Annotation, in ctx: CGContext) {
+        guard a.points.count >= 2 else { return }
+        ctx.saveGState()
+        ctx.setStrokeColor(a.style.color.cgColor)
+        ctx.setLineWidth(a.style.lineWidth)
+        ctx.setLineCap(.round)
+        ctx.setLineJoin(.round)
+        let path = smoothedPath(a.points)
+        ctx.addPath(path)
+        ctx.strokePath()
+        ctx.restoreGState()
+    }
+
+    /// Catmull-Rom smoothing through the points → cubic bezier path.
+    private static func smoothedPath(_ pts: [CGPoint]) -> CGPath {
+        let path = CGMutablePath()
+        guard let first = pts.first else { return path }
+        path.move(to: first)
+        if pts.count == 2 { path.addLine(to: pts[1]); return path }
+        for i in 0..<(pts.count - 1) {
+            let p0 = pts[max(i - 1, 0)]
+            let p1 = pts[i]
+            let p2 = pts[i + 1]
+            let p3 = pts[min(i + 2, pts.count - 1)]
+            let c1 = CGPoint(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6)
+            let c2 = CGPoint(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6)
+            path.addCurve(to: p2, control1: c1, control2: c2)
+        }
+        return path
+    }
+
+    private static func drawCounter(_ a: Annotation, in ctx: CGContext) {
+        let radius = max(a.style.lineWidth * 2.2, 14)
+        let center = a.start
+        let circle = CGRect(x: center.x - radius, y: center.y - radius,
+                            width: radius * 2, height: radius * 2)
+        ctx.saveGState()
+        ctx.setFillColor(a.style.color.cgColor)
+        ctx.fillEllipse(in: circle)
+
+        // CoreText (not NSString.draw) so orientation is deterministic — it draws
+        // on the CGContext directly, independent of NSGraphicsContext.current.
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: radius * 1.2, weight: .bold),
+            .foregroundColor: NSColor.white,
+        ]
+        let line = CTLineCreateWithAttributedString(NSAttributedString(string: "\(a.number)",
+                                                                       attributes: attrs))
+        var ascent: CGFloat = 0, descent: CGFloat = 0, leading: CGFloat = 0
+        let width = CGFloat(CTLineGetTypographicBounds(line, &ascent, &descent, &leading))
+
+        ctx.saveGState()
+        ctx.translateBy(x: center.x, y: center.y)
+        ctx.scaleBy(x: 1, y: -1)            // local flip → upright in top-left space
+        ctx.textMatrix = .identity
+        ctx.textPosition = CGPoint(x: -width / 2, y: -(ascent - descent) / 2)
+        CTLineDraw(line, ctx)
+        ctx.restoreGState()
+        ctx.restoreGState()
+    }
+
+    private static func drawSpotlight(_ a: Annotation, in ctx: CGContext, base: CGImage) {
+        let full = CGRect(x: 0, y: 0, width: base.width, height: base.height)
+        let rect = a.rect
+        ctx.saveGState()
+        ctx.setFillColor(NSColor.black.withAlphaComponent(0.55).cgColor)
+        // Even-odd fill: outer rect + inner ellipse → darkens everything but the ellipse.
+        let path = CGMutablePath()
+        path.addRect(full)
+        path.addEllipse(in: rect)
+        ctx.addPath(path)
+        ctx.fillPath(using: .evenOdd)
         ctx.restoreGState()
     }
 
