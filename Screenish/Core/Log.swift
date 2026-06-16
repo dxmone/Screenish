@@ -30,12 +30,50 @@ private let gBacktraceBuffer =
 private let gSignalBannerBytes =
     Array("\n*** SCREENISH CRASHED (fatal signal) — backtrace follows ***\n".utf8)
 
-/// Async-signal-safe: writes a fixed banner + raw backtrace to the pre-opened fd,
-/// then restores the default disposition and re-raises so macOS still produces a
-/// full .ips report.
-private func screenishCrashSignalHandler(_ sig: Int32) {
+// Labels + scratch for the handler, all allocated once at load so the handler itself
+// allocates nothing. The banner records the signal number and fault address (si_addr):
+// addr 0x0 means a null deref, a wild value means a bad pointer — enough to triage even
+// before the backtrace is symbolicated.
+private let gSigLabel = Array("*** signal=0x".utf8)
+private let gAddrLabel = Array(" addr=0x".utf8)
+private let gNewlineByte = Array("\n".utf8)
+private let gHexDigits = Array("0123456789abcdef".utf8)
+private let gHexScratch = UnsafeMutablePointer<UInt8>.allocate(capacity: 16)
+
+// Alternate signal stack so the handler can still run when the crash is a stack
+// overflow (SIGSEGV/SIGBUS with the normal stack exhausted). 64 KiB > MINSIGSTKSZ.
+private let gSigAltStackSize = 64 * 1024
+private let gSigAltStack =
+    UnsafeMutableRawPointer.allocate(byteCount: gSigAltStackSize, alignment: 16)
+
+/// Async-signal-safe: write a 64-bit value as 16 hex digits to fd using only the
+/// pre-allocated scratch buffer (no allocation, no locks).
+private func writeHexValue(_ fd: Int32, _ value: UInt64) {
+    var v = value
+    var i = 15
+    while i >= 0 {
+        gHexScratch[i] = gHexDigits[Int(v & 0xF)]
+        v >>= 4
+        i -= 1
+    }
+    _ = write(fd, gHexScratch, 16)
+}
+
+/// Async-signal-safe: writes a banner (signal number + fault address) and a raw
+/// backtrace to the pre-opened fd, then restores the default disposition and re-raises
+/// so macOS still produces a full .ips report. SA_SIGINFO gives us `si_addr`.
+private func screenishCrashSignalHandler(
+    _ sig: Int32,
+    _ info: UnsafeMutablePointer<siginfo_t>?,
+    _ context: UnsafeMutableRawPointer?
+) {
     if gCrashFD >= 0 {
         gSignalBannerBytes.withUnsafeBytes { _ = write(gCrashFD, $0.baseAddress, $0.count) }
+        gSigLabel.withUnsafeBytes { _ = write(gCrashFD, $0.baseAddress, $0.count) }
+        writeHexValue(gCrashFD, UInt64(UInt32(bitPattern: sig)))
+        gAddrLabel.withUnsafeBytes { _ = write(gCrashFD, $0.baseAddress, $0.count) }
+        writeHexValue(gCrashFD, UInt64(UInt(bitPattern: info?.pointee.si_addr)))
+        gNewlineByte.withUnsafeBytes { _ = write(gCrashFD, $0.baseAddress, $0.count) }
         let n = backtrace(gBacktraceBuffer, Int32(gBacktraceCapacity))
         backtrace_symbols_fd(gBacktraceBuffer, n, gCrashFD)
         fsync(gCrashFD)
@@ -131,15 +169,15 @@ enum CrashReporter {
         rawWrite("[\(timestampFormatter.string(from: Date()))] \(message)\n")
     }
 
-    /// Append a clean-shutdown marker and close the fd. Call from
-    /// applicationWillTerminate so a normal quit isn't mistaken for a crash.
+    /// Append a clean-shutdown marker. Call from applicationWillTerminate so a normal
+    /// quit isn't mistaken for a crash. We deliberately keep the fd OPEN: teardown
+    /// continues after this (cleanupTempDirectory, deinits) and a crash there must still
+    /// reach the signal handler. The OS closes the fd on exit; a teardown crash appends
+    /// its banner *after* this marker, and crash detection keys on the banner sentinel,
+    /// not the absence of the marker — so it's still reported.
     static func markCleanShutdown() {
         rawWrite(cleanMarker)
-        if gCrashFD >= 0 {
-            fsync(gCrashFD)
-            close(gCrashFD)
-            gCrashFD = -1
-        }
+        if gCrashFD >= 0 { fsync(gCrashFD) }
     }
 
     private static func rawWrite(_ text: String) {
@@ -223,8 +261,19 @@ enum CrashReporter {
     // MARK: - Handlers
 
     private static func installSignalHandlers() {
+        // Register the alternate stack so SA_ONSTACK handlers survive stack overflow.
+        var altStack = stack_t()
+        altStack.ss_sp = gSigAltStack
+        altStack.ss_size = gSigAltStackSize
+        altStack.ss_flags = 0
+        sigaltstack(&altStack, nil)
+
+        var action = sigaction()
+        action.__sigaction_u.__sa_sigaction = screenishCrashSignalHandler
+        action.sa_flags = SA_SIGINFO | SA_ONSTACK
+        sigemptyset(&action.sa_mask)
         for sig in [SIGABRT, SIGSEGV, SIGILL, SIGTRAP, SIGBUS, SIGFPE] {
-            signal(sig, screenishCrashSignalHandler)
+            sigaction(sig, &action, nil)
         }
     }
 
