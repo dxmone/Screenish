@@ -15,6 +15,7 @@ struct CanvasView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: CanvasNSView, context: Context) {
+        nsView.syncEditingTextStyle()
         nsView.needsDisplay = true
     }
 }

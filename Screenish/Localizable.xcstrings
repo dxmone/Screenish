@@ -10,6 +10,16 @@
     "%lld%%" : {
 
     },
+    "Add a numbered step marker" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lägg till en numrerad stegmarkör"
+          }
+        }
+      }
+    },
     "Add text" : {
       "localizations" : {
         "sv" : {
@@ -40,9 +50,6 @@
         }
       }
     },
-    "Add a numbered step marker" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Lägg till en numrerad stegmarkör" } } }
-    },
     "Arrow" : {
       "localizations" : {
         "sv" : {
@@ -54,22 +61,14 @@
       }
     },
     "Arrow style" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Pilstil" } } }
-    },
-    "Counter" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Räknare" } } }
-    },
-    "Draw freehand" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Rita på fri hand" } } }
-    },
-    "Pencil" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Penna" } } }
-    },
-    "Spotlight" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Strålkastare" } } }
-    },
-    "Spotlight an area (darken the rest)" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Lyft fram ett område (mörka resten)" } } }
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pilstil"
+          }
+        }
+      }
     },
     "Aspect Ratio" : {
       "localizations" : {
@@ -161,6 +160,9 @@
         }
       }
     },
+    "Click to reveal the crash log so you can share it." : {
+
+    },
     "Color" : {
       "localizations" : {
         "sv" : {
@@ -211,6 +213,16 @@
         }
       }
     },
+    "Counter" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Räknare"
+          }
+        }
+      }
+    },
     "Crop" : {
       "localizations" : {
         "sv" : {
@@ -227,6 +239,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beskär bilden"
+          }
+        }
+      }
+    },
+    "Clear all edits" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rensa alla ändringar"
           }
         }
       }
@@ -317,6 +339,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rita en ellips eller cirkel"
+          }
+        }
+      }
+    },
+    "Draw freehand" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rita på fri hand"
           }
         }
       }
@@ -472,6 +504,16 @@
         }
       }
     },
+    "Pencil" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Penna"
+          }
+        }
+      }
+    },
     "Pixelate" : {
       "localizations" : {
         "sv" : {
@@ -572,6 +614,9 @@
         }
       }
     },
+    "Reveal Crash Logs" : {
+
+    },
     "Save" : {
       "localizations" : {
         "sv" : {
@@ -613,6 +658,9 @@
       }
     },
     "Screenish" : {
+
+    },
+    "Screenish crashed last session" : {
 
     },
     "Select" : {
@@ -676,6 +724,26 @@
         }
       }
     },
+    "Spotlight" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strålkastare"
+          }
+        }
+      }
+    },
+    "Spotlight an area (darken the rest)" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lyft fram ett område (mörka resten)"
+          }
+        }
+      }
+    },
     "System" : {
       "localizations" : {
         "sv" : {
@@ -692,6 +760,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Text"
+          }
+        }
+      }
+    },
+    "Text size" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Textstorlek"
           }
         }
       }

@@ -8,6 +8,7 @@
 //
 
 import AppKit
+import CoreText
 
 enum AnnotationKind: String {
     case arrow
@@ -41,7 +42,7 @@ struct AnnotationStyle {
     var fontSize: CGFloat
     var arrowStyle: ArrowStyle = .straight
 
-    static let `default` = AnnotationStyle(color: .systemRed, lineWidth: 9, fontSize: 54)
+    static let `default` = AnnotationStyle(color: .systemRed, lineWidth: 9, fontSize: 27)
 }
 
 struct Annotation: Identifiable {
@@ -88,4 +89,19 @@ struct Annotation: Identifiable {
         copy.points = points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) }
         return copy
     }
+}
+
+/// Height (image-pixel space) text needs at a given box width and font size.
+/// Shared by inline editing (commit/refit) and toolbar size changes.
+func fittedTextHeight(_ text: String, width: CGFloat, fontSize: CGFloat) -> CGFloat {
+    guard !text.isEmpty, width > 1 else { return fontSize * 1.4 }
+    let attrs: [NSAttributedString.Key: Any] = [
+        .font: NSFont.systemFont(ofSize: fontSize, weight: .semibold),
+    ]
+    let attr = NSAttributedString(string: text, attributes: attrs)
+    let fs = CTFramesetterCreateWithAttributedString(attr)
+    let size = CTFramesetterSuggestFrameSizeWithConstraints(
+        fs, CFRange(location: 0, length: attr.length), nil,
+        CGSize(width: width, height: .greatestFiniteMagnitude), nil)
+    return max(ceil(size.height), fontSize * 1.4)
 }

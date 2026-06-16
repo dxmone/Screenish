@@ -111,6 +111,21 @@ final class EditorDocument: ObservableObject {
               let idx = annotations.firstIndex(where: { $0.id == id }) else { return }
         beginInteraction()
         annotations[idx].style = style
+        // Text boxes must grow/shrink with the font so glyphs aren't clipped.
+        if annotations[idx].kind == .text {
+            let r = annotations[idx].rect
+            let h = fittedTextHeight(annotations[idx].text, width: r.width, fontSize: style.fontSize)
+            annotations[idx].start = CGPoint(x: r.minX, y: r.minY)
+            annotations[idx].end = CGPoint(x: r.maxX, y: r.minY + h)
+        }
+    }
+
+    /// Remove all annotations (one undo step). Keeps crop and background.
+    func clearAnnotations() {
+        guard !annotations.isEmpty else { return }
+        beginInteraction()
+        annotations.removeAll()
+        selectionID = nil
     }
 
     func setCrop(_ rect: CGRect?) {

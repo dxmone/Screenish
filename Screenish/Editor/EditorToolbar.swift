@@ -45,6 +45,14 @@ struct EditorToolbar: View {
                     .onHover { setHelp(String(localized: "Arrow style"), $0) }
                 }
 
+                if showTextSize {
+                    Stepper(value: fontSizeBinding, in: 8...200, step: 2) {
+                        Image(systemName: "textformat.size")
+                    }
+                    .frame(width: 90)
+                    .onHover { setHelp(String(localized: "Text size"), $0) }
+                }
+
                 Divider().frame(height: 20)
 
                 Button { document.undo() } label: { Image(systemName: "arrow.uturn.backward") }
@@ -56,6 +64,9 @@ struct EditorToolbar: View {
                 Button { document.deleteSelected() } label: { Image(systemName: "trash") }
                     .disabled(document.selectionID == nil)
                     .onHover { setHelp(String(localized: "Delete selected"), $0) }
+                Button { document.clearAnnotations() } label: { Image(systemName: "trash.slash") }
+                    .disabled(document.annotations.isEmpty)
+                    .onHover { setHelp(String(localized: "Clear all edits"), $0) }
             }
 
             Text(hoverHelp ?? document.tool.helpText)
@@ -113,6 +124,18 @@ struct EditorToolbar: View {
         Binding(
             get: { document.selected?.style.arrowStyle ?? document.style.arrowStyle },
             set: { document.style.arrowStyle = $0; document.applyStyleToSelection() }
+        )
+    }
+
+    /// Show the text-size control for the text tool or a selected text annotation.
+    private var showTextSize: Bool {
+        document.tool == .text || document.selected?.kind == .text
+    }
+
+    private var fontSizeBinding: Binding<Double> {
+        Binding(
+            get: { Double(document.selected?.style.fontSize ?? document.style.fontSize) },
+            set: { document.style.fontSize = CGFloat($0); document.applyStyleToSelection() }
         )
     }
 }

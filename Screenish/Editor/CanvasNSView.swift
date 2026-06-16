@@ -8,6 +8,7 @@
 //
 
 import AppKit
+import CoreText
 
 final class CanvasNSView: NSView {
     let document: EditorDocument
@@ -44,7 +45,11 @@ final class CanvasNSView: NSView {
     // reads as a bounded image. Annotation geometry is in inner-image pixels and
     // maps through the layout's innerOrigin (image top-left within the composite).
 
-    private var innerSize: CGSize { document.imageSize }
+    // Crop is non-destructive: the canvas displays only the cropped region as the
+    // focused image. Annotation geometry stays in original-image space; cropOrigin
+    // shifts between original-image space and the visible inner (crop) space.
+    private var cropOrigin: CGPoint { document.cropRect?.origin ?? .zero }
+    private var innerSize: CGSize { document.cropRect?.size ?? document.imageSize }
     private var bgLayout: BackgroundLayout {
         BackgroundRenderer.layout(innerSize: innerSize, style: document.background)
     }
@@ -65,19 +70,19 @@ final class CanvasNSView: NSView {
 
     private func imagePoint(_ event: NSEvent) -> CGPoint {
         let p = convert(event.locationInWindow, from: nil)
-        return CGPoint(x: (p.x - offset.x) / scale - innerOrigin.x,
-                       y: (p.y - offset.y) / scale - innerOrigin.y)
+        return CGPoint(x: (p.x - offset.x) / scale - innerOrigin.x + cropOrigin.x,
+                       y: (p.y - offset.y) / scale - innerOrigin.y + cropOrigin.y)
     }
 
     private func viewRect(_ imageRect: CGRect) -> CGRect {
-        CGRect(x: offset.x + (innerOrigin.x + imageRect.minX) * scale,
-               y: offset.y + (innerOrigin.y + imageRect.minY) * scale,
+        CGRect(x: offset.x + (innerOrigin.x + imageRect.minX - cropOrigin.x) * scale,
+               y: offset.y + (innerOrigin.y + imageRect.minY - cropOrigin.y) * scale,
                width: imageRect.width * scale, height: imageRect.height * scale)
     }
 
     private func viewPoint(_ imagePoint: CGPoint) -> CGPoint {
-        CGPoint(x: offset.x + (innerOrigin.x + imagePoint.x) * scale,
-                y: offset.y + (innerOrigin.y + imagePoint.y) * scale)
+        CGPoint(x: offset.x + (innerOrigin.x + imagePoint.x - cropOrigin.x) * scale,
+                y: offset.y + (innerOrigin.y + imagePoint.y - cropOrigin.y) * scale)
     }
 
     // MARK: - Drawing
@@ -129,14 +134,21 @@ final class CanvasNSView: NSView {
         ctx.saveGState()
         ctx.translateBy(x: innerRect.minX, y: innerRect.maxY)
         ctx.scaleBy(x: 1, y: -1)
-        ctx.draw(document.baseImage, in: CGRect(origin: .zero, size: innerSize))
+        // Clip to the visible (crop) region, then draw the full base shifted so the
+        // crop origin lands at the inner top-left — only the cropped part shows.
+        ctx.clip(to: CGRect(origin: .zero, size: innerSize))
+        ctx.draw(document.baseImage,
+                 in: CGRect(x: -cropOrigin.x, y: -cropOrigin.y,
+                            width: document.imageSize.width, height: document.imageSize.height))
         ctx.restoreGState()
         ctx.restoreGState()
 
-        // Annotations in inner-image space — NOT clipped, so they stay fully
-        // visible and editable even with a background/rounded corners.
+        // Annotations in original-image space, shifted by the crop origin and
+        // clipped to the crop region (so annotations outside the crop are hidden,
+        // matching the exported image).
         ctx.saveGState()
-        ctx.translateBy(x: l.innerOrigin.x, y: l.innerOrigin.y)
+        ctx.translateBy(x: l.innerOrigin.x - cropOrigin.x, y: l.innerOrigin.y - cropOrigin.y)
+        ctx.clip(to: CGRect(origin: cropOrigin, size: innerSize))
         for annotation in document.annotations where annotation.id != editingAnnotationID {
             AnnotationDrawer.draw(annotation, in: ctx, base: document.baseImage)
         }
@@ -163,15 +175,17 @@ final class CanvasNSView: NSView {
     }
 
     private func drawCropOverlay(_ ctx: CGContext) {
-        let rect = cropDraft ?? document.cropRect
-        guard let rect else { return }
+        // Only preview the active drag; a committed crop is already shown cropped.
+        guard let rect = cropDraft else { return }
         let v = viewRect(rect)
+        // Darken everything outside the selection with an even-odd mask so the
+        // inside keeps showing the real image (no transparent punch-through).
+        let path = CGMutablePath()
+        path.addRect(bounds)
+        path.addRect(v)
+        ctx.addPath(path)
         ctx.setFillColor(NSColor.black.withAlphaComponent(0.45).cgColor)
-        ctx.fill(bounds)
-        ctx.setFillColor(NSColor.clear.cgColor)
-        ctx.setBlendMode(.copy)
-        ctx.fill(v)
-        ctx.setBlendMode(.normal)
+        ctx.fillPath(using: .evenOdd)
         ctx.setStrokeColor(NSColor.controlAccentColor.cgColor)
         ctx.setLineWidth(1)
         ctx.stroke(v)
@@ -258,6 +272,15 @@ final class CanvasNSView: NSView {
             return
         }
 
+        // Text tool: click an existing text annotation → edit it, not a new box.
+        if document.tool == .text, let hit = annotationHit(p), hit.kind == .text {
+            document.selectionID = hit.id
+            creatingText = false
+            startEditing(hit)
+            dragMode = .none
+            return
+        }
+
         if document.tool == .select {
             if let sel = document.selected, let h = handle(at: p, of: sel) {
                 dragMode = .resize(h)
@@ -273,12 +296,6 @@ final class CanvasNSView: NSView {
                 dragMode = .none
             }
             needsDisplay = true
-            return
-        }
-
-        if document.tool == .text {
-            beginTextCreation(at: p)
-            dragMode = .none
             return
         }
 
@@ -340,6 +357,25 @@ final class CanvasNSView: NSView {
         switch dragMode {
         case .create:
             if var d = draft {
+                if d.kind == .text {
+                    // Drag → sized box; click (tiny) → default box at the click point.
+                    let r = d.rect
+                    if r.width < 12 || r.height < 12 {
+                        let w: CGFloat = 240
+                        let h = d.style.fontSize * 1.6
+                        d.start = CGPoint(x: r.minX, y: r.minY)
+                        d.end = CGPoint(x: r.minX + w, y: r.minY + h)
+                    }
+                    d.style = document.style
+                    document.add(d)
+                    draft = nil
+                    creatingText = true
+                    startEditing(d)
+                    dragMode = .none
+                    moveOriginal = nil
+                    needsDisplay = true
+                    return
+                }
                 let r = d.rect
                 let bigEnough: Bool
                 if d.kind.isPath {
@@ -413,24 +449,6 @@ final class CanvasNSView: NSView {
 
     // MARK: - Text editing
 
-    private func beginTextCreation(at p: CGPoint) {
-        let defaultSize = CGSize(width: 240, height: document.style.fontSize * 1.6)
-        let annotation = Annotation(kind: .text,
-                                    start: p,
-                                    end: CGPoint(x: p.x + defaultSize.width, y: p.y + defaultSize.height),
-                                    style: document.style, text: "")
-        document.add(annotation)
-        creatingText = true
-        startEditing(annotation)
-    }
-
-    func beginEditingSelectedTextIfNeeded() {
-        if let sel = document.selected, sel.kind == .text {
-            creatingText = false
-            startEditing(sel)
-        }
-    }
-
     private func startEditing(_ annotation: Annotation) {
         let vRect = viewRect(annotation.rect)
         let tv = NSTextView(frame: vRect)
@@ -442,12 +460,39 @@ final class CanvasNSView: NSView {
         tv.string = annotation.text
         tv.delegate = self
         tv.textContainerInset = .zero
+
+        // Multi-line: wrap to the box width, allow newlines, grow vertically.
+        tv.isHorizontallyResizable = false
+        tv.isVerticallyResizable = true
+        tv.textContainer?.widthTracksTextView = true
+        tv.textContainer?.containerSize = CGSize(width: vRect.width,
+                                                 height: .greatestFiniteMagnitude)
+        tv.minSize = CGSize(width: vRect.width, height: vRect.height)
+        tv.maxSize = CGSize(width: vRect.width, height: .greatestFiniteMagnitude)
+
         addSubview(tv)
         window?.makeFirstResponder(tv)
         textView = tv
         editingAnnotationID = annotation.id
         needsDisplay = true
     }
+
+    /// Push the editing annotation's current style into the live text view so
+    /// font-size / colour changes from the toolbar show up while still editing.
+    func syncEditingTextStyle() {
+        guard let tv = textView, let id = editingAnnotationID,
+              let a = document.annotations.first(where: { $0.id == id }) else { return }
+        tv.font = NSFont.systemFont(ofSize: a.style.fontSize * scale, weight: .semibold)
+        tv.textColor = a.style.color
+        // Re-fit the box height for the new font (same as textDidChange auto-grow).
+        if let lm = tv.layoutManager, let container = tv.textContainer {
+            lm.ensureLayout(for: container)
+            var frame = tv.frame
+            frame.size.height = max(lm.usedRect(for: container).height, frame.height)
+            tv.frame = frame
+        }
+    }
+
 
     func commitTextEditing() {
         guard let tv = textView, let id = editingAnnotationID else { return }
@@ -462,6 +507,12 @@ final class CanvasNSView: NSView {
                 if document.selectionID == id { document.selectionID = nil }
             } else {
                 document.annotations[idx].text = string
+                // Fit the box height to the (possibly multi-line) text.
+                let a = document.annotations[idx]
+                let r = a.rect
+                let h = fittedTextHeight(string, width: r.width, fontSize: a.style.fontSize)
+                document.annotations[idx].start = CGPoint(x: r.minX, y: r.minY)
+                document.annotations[idx].end = CGPoint(x: r.maxX, y: r.minY + h)
             }
         }
         creatingText = false
@@ -472,6 +523,17 @@ final class CanvasNSView: NSView {
 extension CanvasNSView: NSTextViewDelegate {
     func textDidEndEditing(_ notification: Notification) {
         commitTextEditing()
+    }
+
+    func textDidChange(_ notification: Notification) {
+        // Auto-grow the editing box vertically as lines are added.
+        guard let tv = textView, let lm = tv.layoutManager,
+              let container = tv.textContainer else { return }
+        lm.ensureLayout(for: container)
+        let used = lm.usedRect(for: container).height
+        var frame = tv.frame
+        frame.size.height = max(used, frame.height)
+        tv.frame = frame
     }
 }
 
