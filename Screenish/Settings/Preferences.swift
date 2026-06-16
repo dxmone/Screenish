@@ -14,12 +14,14 @@ enum Prefs {
     static let compressJPEGKey = "compressJPEG"
     static let launchAtLoginKey = "launchAtLogin"
     static let removeAfterDragKey = "removeAfterDrag"
+    static let openEditorAfterCaptureKey = "openEditorAfterCapture"
     static let defaultBackgroundKey = "defaultBackgroundStyle"
 
     /// Register defaults that differ from the zero value (hideAtLaunch is on).
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
             hideAtLaunchKey: true,
+            openEditorAfterCaptureKey: true,
             // Make AppKit tooltips appear almost instantly (ms).
             "NSInitialToolTipDelay": 250,
         ])
@@ -47,6 +49,10 @@ enum Prefs {
 
     static var removeAfterDrag: Bool {
         UserDefaults.standard.bool(forKey: removeAfterDragKey)
+    }
+
+    static var openEditorAfterCapture: Bool {
+        UserDefaults.standard.bool(forKey: openEditorAfterCaptureKey)
     }
 
     /// Remembered beautify style, applied to new captures and updated on each edit.

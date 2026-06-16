@@ -11,6 +11,7 @@ struct EditorView: View {
     @ObservedObject var document: EditorDocument
     var onDone: ([Annotation], CGRect?, BackgroundStyle) -> Void
     var onClose: () -> Void
+    var onDiscard: () -> Void = {}
     var onDragWillBegin: () -> Void = {}
     var onDragRestore: () -> Void = {}
     var onDragDelivered: () -> Void = {}
@@ -44,7 +45,7 @@ struct EditorView: View {
                 .background(Color(nsColor: .windowBackgroundColor))
         }
         .frame(minWidth: 900, minHeight: 520)
-        .onExitCommand { onClose() }   // Esc hides the editor; shot stays in the stack
+        .onExitCommand { onDiscard() }   // Esc discards the shot (removes from stack) + closes
     }
 
     /// A grab handle (self-contained AppKit drag source) that drags the current

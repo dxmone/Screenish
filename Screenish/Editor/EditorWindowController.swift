@@ -13,7 +13,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
     var onClosed: (() -> Void)?
 
     init(shot: Shot, onDone: @escaping ([Annotation], CGRect?, BackgroundStyle) -> Void,
-         onDragDelivered: @escaping () -> Void = {}) {
+         onDragDelivered: @escaping () -> Void = {},
+         onDiscard: @escaping () -> Void = {}) {
         let document = EditorDocument(shot: shot)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1120, height: 740),
@@ -32,6 +33,10 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
             // No animation at drag START — hiding the source window cancels the
             // in-flight drag. The thumbnail follows the cursor; the window flies
             // away only AFTER a successful drop.
+            onDiscard: { [weak self] in
+                onDiscard()
+                self?.close()
+            },
             onDragDelivered: { [weak self] in
                 onDragDelivered()
                 self?.animateAwayThenClose()

@@ -431,6 +431,16 @@
         }
       }
     },
+    "Open editor after capture" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öppna redigeraren efter tagen bild"
+          }
+        }
+      }
+    },
     "Padding" : {
       "localizations" : {
         "sv" : {

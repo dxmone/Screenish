@@ -30,7 +30,7 @@ struct AnnotationStyle {
     var lineWidth: CGFloat
     var fontSize: CGFloat
 
-    static let `default` = AnnotationStyle(color: .systemRed, lineWidth: 4, fontSize: 36)
+    static let `default` = AnnotationStyle(color: .systemRed, lineWidth: 6, fontSize: 36)
 }
 
 struct Annotation: Identifiable {

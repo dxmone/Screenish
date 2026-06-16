@@ -44,38 +44,41 @@ enum AnnotationDrawer {
     }
 
     private static func drawArrow(_ a: Annotation, in ctx: CGContext) {
+        // Tail at `start` (where the drag begins), head/tip at `end` (where it
+        // points). Clean shaft + filled triangle head, sized to the line width.
+        let tip = a.end          // arrow points here
+        let tail = a.start
+        let w = a.style.lineWidth
+        let dx = tip.x - tail.x
+        let dy = tip.y - tail.y
+        let length = max(hypot(dx, dy), 1)
+        let ux = dx / length      // unit direction tail → tip
+        let uy = dy / length
+        let px = -uy              // perpendicular
+        let py = ux
+
+        let headLength = min(max(w * 3.5, 18), length)
+        let headHalfWidth = w * 1.6
+
+        // Base of the head (where the shaft ends).
+        let baseX = tip.x - ux * headLength
+        let baseY = tip.y - uy * headLength
+
         ctx.saveGState()
         ctx.setStrokeColor(a.style.color.cgColor)
         ctx.setFillColor(a.style.color.cgColor)
-        ctx.setLineWidth(a.style.lineWidth)
+        ctx.setLineWidth(w)
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
 
-        let dx = a.end.x - a.start.x
-        let dy = a.end.y - a.start.y
-        let length = max(hypot(dx, dy), 1)
-        let angle = atan2(dy, dx)
-        let headLength = min(max(a.style.lineWidth * 4, 14), length)
-        let headWidth = headLength * 0.8
-
-        // Shaft stops short of the head so the tip is clean.
-        let shaftEnd = CGPoint(x: a.end.x - cos(angle) * headLength * 0.6,
-                               y: a.end.y - sin(angle) * headLength * 0.6)
-        ctx.move(to: a.start)
-        ctx.addLine(to: shaftEnd)
+        // Shaft: tail → base of head.
+        ctx.move(to: tail)
+        ctx.addLine(to: CGPoint(x: baseX, y: baseY))
         ctx.strokePath()
 
-        let tip = a.end
-        let spread: CGFloat = .pi / 7
-        let leftAngle = angle - spread
-        let rightAngle = angle + spread
-        let lx: CGFloat = tip.x - cos(leftAngle) * headLength
-        let ly: CGFloat = tip.y - sin(leftAngle) * headLength
-        let rx: CGFloat = tip.x - cos(rightAngle) * headLength
-        let ry: CGFloat = tip.y - sin(rightAngle) * headLength
-        let left = CGPoint(x: lx, y: ly)
-        let right = CGPoint(x: rx, y: ry)
-        _ = headWidth
+        // Filled triangle head.
+        let left = CGPoint(x: baseX + px * headHalfWidth, y: baseY + py * headHalfWidth)
+        let right = CGPoint(x: baseX - px * headHalfWidth, y: baseY - py * headHalfWidth)
         ctx.move(to: tip)
         ctx.addLine(to: left)
         ctx.addLine(to: right)

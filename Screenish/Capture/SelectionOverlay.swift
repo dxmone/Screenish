@@ -32,7 +32,16 @@ final class SelectionOverlayController {
     private var hoverRectGlobal: CGRect?
 
     func present(mode: OverlayMode) async -> OverlayResult {
-        await withCheckedContinuation { continuation in
+        // Defensive: never overwrite a live continuation (would leak it). Resume
+        // and tear down any previous session first.
+        if let leftover = continuation {
+            continuation = nil
+            windows.forEach { $0.orderOut(nil) }
+            windows.removeAll()
+            views.removeAll()
+            leftover.resume(returning: .cancelled)
+        }
+        return await withCheckedContinuation { continuation in
             self.continuation = continuation
             self.mode = mode
             self.dragStartGlobal = nil
