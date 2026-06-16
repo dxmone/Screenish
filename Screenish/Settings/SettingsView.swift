@@ -19,7 +19,38 @@ struct SettingsView: View {
                 .tabItem { Label("Shortcuts", systemImage: "command") }
         }
         .frame(width: 460)
+        // Accessory apps don't auto-activate, so the Settings window can open
+        // behind other apps. Force it front whenever it appears.
+        .background(WindowAccessor { window in
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+        })
     }
+}
+
+/// Opens the SwiftUI Settings scene AND activates the app, so the window lands
+/// in front for this menu-bar (accessory) app. `SettingsLink` gives no
+/// activation hook, hence the private selector.
+enum SettingsWindow {
+    static func open() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    }
+}
+
+/// Reaches the hosting NSWindow once SwiftUI has attached it.
+private struct WindowAccessor: NSViewRepresentable {
+    let onWindow: (NSWindow) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            if let window = view.window { onWindow(window) }
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }
 
 private struct GeneralSettingsView: View {
@@ -28,6 +59,7 @@ private struct GeneralSettingsView: View {
     @AppStorage(Prefs.compressJPEGKey) private var compressJPEG: Bool = false
     @AppStorage(Prefs.launchAtLoginKey) private var launchAtLogin: Bool = false
     @AppStorage(Prefs.removeAfterDragKey) private var removeAfterDrag: Bool = false
+    @AppStorage(Prefs.openEditorAfterCaptureKey) private var openEditorAfterCapture: Bool = true
 
     @State private var language: AppLanguage = .current
     @State private var showRelaunchPrompt = false
@@ -59,6 +91,7 @@ private struct GeneralSettingsView: View {
                 }
             }
 
+            Toggle("Open editor after capture", isOn: $openEditorAfterCapture)
             Toggle("Always hide window at launch", isOn: $hideAtLaunch)
             Toggle("Compress to JPG when saving", isOn: $compressJPEG)
             Toggle("Remove from stack after drag and drop", isOn: $removeAfterDrag)

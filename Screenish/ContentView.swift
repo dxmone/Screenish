@@ -21,10 +21,8 @@ struct MenuContent: View {
 
         Divider()
 
-        SettingsLink {
-            Text("Settings…")
-        }
-        .keyboardShortcut(",", modifiers: .command)
+        Button("Settings…") { SettingsWindow.open() }
+            .keyboardShortcut(",", modifiers: .command)
 
         Button("Quit Screenish") { NSApp.terminate(nil) }
             .keyboardShortcut("q", modifiers: .command)

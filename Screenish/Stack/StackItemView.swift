@@ -12,19 +12,43 @@ struct StackView: View {
     @ObservedObject var store: ShotStore
 
     var body: some View {
-        VStack(spacing: 8) {
-            ForEach(store.shots) { shot in
-                StackItemView(shot: shot, store: store)
+        Group {
+            if store.shots.count <= StackMetrics.collapseThreshold {
+                VStack(spacing: 8) {
+                    ForEach(store.shots) { shot in
+                        StackItemView(shot: shot, store: store)
+                    }
+                }
+            } else {
+                collapsedPile
             }
         }
         .padding(10)
         .frame(width: StackMetrics.cardWidth + 20)
+    }
+
+    /// More than `collapseThreshold` shots → pile them with a small peek so the
+    /// stack stays compact. Newest is on top and fully visible.
+    private var collapsedPile: some View {
+        let count = store.shots.count
+        let peek = StackMetrics.pilePeek
+        return ZStack(alignment: .top) {
+            ForEach(Array(store.shots.enumerated()), id: \.element.id) { index, shot in
+                StackItemView(shot: shot, store: store)
+                    .offset(y: CGFloat(index) * peek)
+                    .zIndex(Double(count - index))
+            }
+        }
+        .frame(height: CGFloat(count - 1) * peek + StackMetrics.maxThumbHeight,
+               alignment: .top)
     }
 }
 
 enum StackMetrics {
     static let cardWidth: CGFloat = 160
     static let maxThumbHeight: CGFloat = 110
+    static let collapseThreshold = 5
+    static let pilePeek: CGFloat = 28
 }
 
 struct StackItemView: View {
@@ -48,25 +72,22 @@ struct StackItemView: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.15)))
             .shadow(radius: 6, y: 3)
+            // AppKit drag source owns click / hover / right-click and drags a
+            // real file URL (works in Electron/chat apps, not just Finder).
+            .overlay {
+                StackDragSourceView(
+                    image: { shot.cgImage },
+                    date: shot.createdAt,
+                    onTap: { open() },
+                    onHoverChange: { hovering = $0 },
+                    onSaveToFolder: { saveToFolder() },
+                    onCopy: { Pasteboard.copy(shot.cgImage) },
+                    onRemove: { store.remove(shot) },
+                    onDelivered: { if Prefs.removeAfterDrag { store.remove(shot) } }
+                )
+            }
+            // Added last → sits above the drag overlay so its taps win.
             .overlay(alignment: .topTrailing) { dismissButton }
-            .onHover { hovering = $0 }
-            .onTapGesture { open() }
-            .onDrag {
-                ShotDrag.itemProvider(for: shot) {
-                    if Prefs.removeAfterDrag { store.remove(shot) }
-                }
-            } preview: {
-                Image(nsImage: shot.nsImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: thumbSize.width, height: thumbSize.height)
-            }
-            .contextMenu {
-                Button("Save to Folder") { saveToFolder() }
-                Button("Copy") { Pasteboard.copy(shot.cgImage) }
-                Divider()
-                Button("Remove", role: .destructive) { store.remove(shot) }
-            }
     }
 
     @ViewBuilder private var dismissButton: some View {

@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import OSLog
 import KeyboardShortcuts
 
 @main
@@ -33,7 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppCoordinator.shared.start()
 
         if !Prefs.hideAtLaunch {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            SettingsWindow.open()
         }
     }
 
@@ -53,6 +54,7 @@ final class AppCoordinator {
     private let capture = CaptureController()
     private lazy var stack = StackController(store: store)
     private var editors: [Shot.ID: EditorWindowController] = [:]
+    private var isCapturing = false
 
     private init() {}
 
@@ -64,11 +66,21 @@ final class AppCoordinator {
     }
 
     func run(_ mode: CaptureMode) {
+        // Ignore overlapping captures — a second one would replace the shared
+        // overlay's continuation and leak the first (hung Task).
+        guard !isCapturing else {
+            Log.general.log("capture ignored: already capturing")
+            return
+        }
+        isCapturing = true
         Task { @MainActor in
+            defer { isCapturing = false }
             guard let cgImage = await capture.capture(mode) else { return }
             if let shot = store.add(cgImage) {
                 Pasteboard.copy(shot.cgImage)   // rendered (incl. remembered beautify)
-                openEditor(for: shot)           // editor opens immediately; shot stays in the stack
+                if Prefs.openEditorAfterCapture {
+                    openEditor(for: shot)       // else it just sits in the stack
+                }
             } else {
                 Pasteboard.copy(cgImage)
             }
@@ -77,6 +89,7 @@ final class AppCoordinator {
 
     /// Open (or focus) the annotation editor for a Shot.
     func openEditor(for shot: Shot) {
+        Log.general.log("openEditor \(shot.id, privacy: .public) existing=\(self.editors[shot.id] != nil)")
         if let existing = editors[shot.id] {
             existing.show()
             return
@@ -93,6 +106,9 @@ final class AppCoordinator {
             },
             onDragDelivered: { [weak self] in
                 self?.store.remove(shot)   // dropped into another app → leave the stack
+            },
+            onDiscard: { [weak self] in
+                self?.store.remove(shot)   // Esc → throw the shot away
             })
         controller.onClosed = { [weak self] in self?.editors[shot.id] = nil }
         editors[shot.id] = controller
