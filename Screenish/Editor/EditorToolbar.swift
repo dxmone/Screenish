@@ -51,6 +51,15 @@ struct EditorToolbar: View {
                     }
                     .frame(width: 90)
                     .onHover { setHelp(String(localized: "Text size"), $0) }
+
+                    Picker("", selection: textStyleBinding) {
+                        ForEach(TextStyle.allCases) { style in
+                            Text(style.label).tag(style)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 140)
+                    .onHover { setHelp(String(localized: "Text style"), $0) }
                 }
 
                 Divider().frame(height: 20)
@@ -136,6 +145,13 @@ struct EditorToolbar: View {
         Binding(
             get: { Double(document.selected?.style.fontSize ?? document.style.fontSize) },
             set: { document.style.fontSize = CGFloat($0); document.applyStyleToSelection() }
+        )
+    }
+
+    private var textStyleBinding: Binding<TextStyle> {
+        Binding(
+            get: { document.selected?.style.textStyle ?? document.style.textStyle },
+            set: { document.style.textStyle = $0; document.applyStyleToSelection() }
         )
     }
 }

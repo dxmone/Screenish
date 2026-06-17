@@ -449,17 +449,30 @@ final class CanvasNSView: NSView {
 
     // MARK: - Text editing
 
+    /// Mirror the annotation's text style onto the live NSTextView (font design,
+    /// boxed background/white text, inner padding) for WYSIWYG editing.
+    private func applyTextStyle(to tv: NSTextView, style: AnnotationStyle) {
+        let ts = style.textStyle
+        tv.font = ts.font(size: style.fontSize * scale)
+        if ts.isBoxed {
+            tv.textColor = .white
+            tv.backgroundColor = style.color
+        } else {
+            tv.textColor = style.color
+            tv.backgroundColor = NSColor.black.withAlphaComponent(0.15)
+        }
+        let pad = ts.boxPadding(for: style.fontSize) * scale
+        tv.textContainerInset = CGSize(width: pad, height: pad)
+    }
+
     private func startEditing(_ annotation: Annotation) {
         let vRect = viewRect(annotation.rect)
         let tv = NSTextView(frame: vRect)
-        tv.font = NSFont.systemFont(ofSize: annotation.style.fontSize * scale, weight: .semibold)
-        tv.textColor = annotation.style.color
-        tv.backgroundColor = NSColor.black.withAlphaComponent(0.15)
         tv.drawsBackground = true
         tv.isRichText = false
         tv.string = annotation.text
         tv.delegate = self
-        tv.textContainerInset = .zero
+        applyTextStyle(to: tv, style: annotation.style)
 
         // Multi-line: wrap to the box width, allow newlines, grow vertically.
         tv.isHorizontallyResizable = false
@@ -482,8 +495,7 @@ final class CanvasNSView: NSView {
     func syncEditingTextStyle() {
         guard let tv = textView, let id = editingAnnotationID,
               let a = document.annotations.first(where: { $0.id == id }) else { return }
-        tv.font = NSFont.systemFont(ofSize: a.style.fontSize * scale, weight: .semibold)
-        tv.textColor = a.style.color
+        applyTextStyle(to: tv, style: a.style)
         // Re-fit the box height for the new font (same as textDidChange auto-grow).
         if let lm = tv.layoutManager, let container = tv.textContainer {
             lm.ensureLayout(for: container)
@@ -510,7 +522,8 @@ final class CanvasNSView: NSView {
                 // Fit the box height to the (possibly multi-line) text.
                 let a = document.annotations[idx]
                 let r = a.rect
-                let h = fittedTextHeight(string, width: r.width, fontSize: a.style.fontSize)
+                let h = fittedTextHeight(string, width: r.width, fontSize: a.style.fontSize,
+                                         textStyle: a.style.textStyle)
                 document.annotations[idx].start = CGPoint(x: r.minX, y: r.minY)
                 document.annotations[idx].end = CGPoint(x: r.maxX, y: r.minY + h)
             }

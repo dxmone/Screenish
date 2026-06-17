@@ -160,6 +160,16 @@
         }
       }
     },
+    "Clear all edits" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rensa alla ändringar"
+          }
+        }
+      }
+    },
     "Click to reveal the crash log so you can share it." : {
 
     },
@@ -239,16 +249,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Beskär bilden"
-          }
-        }
-      }
-    },
-    "Clear all edits" : {
-      "localizations" : {
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rensa alla ändringar"
           }
         }
       }
@@ -763,6 +763,30 @@
           }
         }
       }
+    },
+    "Standard" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Standard" } } }
+    },
+    "Rounded" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Rundad" } } }
+    },
+    "Monospaced" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Monospace" } } }
+    },
+    "Outlined" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Konturerad" } } }
+    },
+    "Boxed" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Ruta" } } }
+    },
+    "Rounded Boxed" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Rundad ruta" } } }
+    },
+    "Monospaced Boxed" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Monospace-ruta" } } }
+    },
+    "Text style" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Textstil" } } }
     },
     "Text size" : {
       "localizations" : {

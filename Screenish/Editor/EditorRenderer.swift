@@ -214,19 +214,35 @@ enum AnnotationDrawer {
 
     private static func drawText(_ a: Annotation, in ctx: CGContext) {
         guard !a.text.isEmpty else { return }
-        let attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: a.style.fontSize, weight: .semibold),
-            .foregroundColor: a.style.color,
-        ]
-        let attr = NSAttributedString(string: a.text, attributes: attrs)
+        let ts = a.style.textStyle
         let rect = a.rect
+
+        // Boxed styles: fill the box first (rounded variant gets a corner radius).
+        if ts.isBoxed {
+            ctx.saveGState()
+            ctx.setFillColor(a.style.color.cgColor)
+            if ts.hasRoundedBox {
+                let r = min(a.style.fontSize * 0.5, rect.height / 2)
+                ctx.addPath(CGPath(roundedRect: rect, cornerWidth: r, cornerHeight: r,
+                                   transform: nil))
+                ctx.fillPath()
+            } else {
+                ctx.fill(rect)
+            }
+            ctx.restoreGState()
+        }
+
+        let pad = ts.boxPadding(for: a.style.fontSize)
+        let textRect = rect.insetBy(dx: pad, dy: pad)
+        let attrs = ts.textAttributes(size: a.style.fontSize, color: a.style.color)
+        let attr = NSAttributedString(string: a.text, attributes: attrs)
 
         ctx.saveGState()
         // Local flip so CoreText draws upright within this top-left context.
-        ctx.translateBy(x: rect.minX, y: rect.minY + rect.height)
+        ctx.translateBy(x: textRect.minX, y: textRect.minY + textRect.height)
         ctx.scaleBy(x: 1, y: -1)
         ctx.textMatrix = .identity
-        let path = CGPath(rect: CGRect(x: 0, y: 0, width: rect.width, height: rect.height),
+        let path = CGPath(rect: CGRect(x: 0, y: 0, width: textRect.width, height: textRect.height),
                           transform: nil)
         let framesetter = CTFramesetterCreateWithAttributedString(attr)
         let frame = CTFramesetterCreateFrame(framesetter,

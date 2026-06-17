@@ -114,7 +114,8 @@ final class EditorDocument: ObservableObject {
         // Text boxes must grow/shrink with the font so glyphs aren't clipped.
         if annotations[idx].kind == .text {
             let r = annotations[idx].rect
-            let h = fittedTextHeight(annotations[idx].text, width: r.width, fontSize: style.fontSize)
+            let h = fittedTextHeight(annotations[idx].text, width: r.width,
+                                     fontSize: style.fontSize, textStyle: style.textStyle)
             annotations[idx].start = CGPoint(x: r.minX, y: r.minY)
             annotations[idx].end = CGPoint(x: r.maxX, y: r.minY + h)
         }

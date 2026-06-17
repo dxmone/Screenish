@@ -71,7 +71,7 @@ final class StackDragNSView: NSView, NSDraggingSource {
         super.updateTrackingAreas()
         if let trackingArea { removeTrackingArea(trackingArea) }
         let area = NSTrackingArea(rect: bounds,
-                                  options: [.mouseEnteredAndExited, .activeInKeyWindow, .activeInActiveApp],
+                                  options: [.mouseEnteredAndExited, .activeAlways],
                                   owner: self, userInfo: nil)
         addTrackingArea(area)
         trackingArea = area

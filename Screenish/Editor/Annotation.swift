@@ -36,11 +36,70 @@ enum ArrowStyle: String {
     case curved
 }
 
+enum TextStyle: String, CaseIterable, Identifiable {
+    case standard
+    case rounded
+    case monospaced
+    case outlined
+    case boxed
+    case roundedBoxed
+    case monospacedBoxed
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .standard:        return String(localized: "Standard")
+        case .rounded:         return String(localized: "Rounded")
+        case .monospaced:      return String(localized: "Monospaced")
+        case .outlined:        return String(localized: "Outlined")
+        case .boxed:           return String(localized: "Boxed")
+        case .roundedBoxed:    return String(localized: "Rounded Boxed")
+        case .monospacedBoxed: return String(localized: "Monospaced Boxed")
+        }
+    }
+
+    var isBoxed: Bool { self == .boxed || self == .roundedBoxed || self == .monospacedBoxed }
+    var isOutlined: Bool { self == .outlined }
+    private var isMono: Bool { self == .monospaced || self == .monospacedBoxed }
+    private var isRoundedFont: Bool { self == .rounded || self == .roundedBoxed }
+    var hasRoundedBox: Bool { self == .roundedBoxed }
+
+    func font(size: CGFloat) -> NSFont {
+        let weight: NSFont.Weight = .semibold
+        if isMono { return NSFont.monospacedSystemFont(ofSize: size, weight: weight) }
+        let base = NSFont.systemFont(ofSize: size, weight: weight)
+        if isRoundedFont, let d = base.fontDescriptor.withDesign(.rounded) {
+            return NSFont(descriptor: d, size: size) ?? base
+        }
+        return base
+    }
+
+    /// Inner padding for boxed styles (so glyphs aren't flush to the box edge).
+    func boxPadding(for fontSize: CGFloat) -> CGFloat { isBoxed ? fontSize * 0.3 : 0 }
+
+    /// CoreText/AppKit attributes for the glyphs (box fill is drawn separately).
+    func textAttributes(size: CGFloat, color: NSColor) -> [NSAttributedString.Key: Any] {
+        var attrs: [NSAttributedString.Key: Any] = [.font: font(size: size)]
+        if isBoxed {
+            attrs[.foregroundColor] = NSColor.white
+        } else if isOutlined {
+            attrs[.foregroundColor] = NSColor.white
+            attrs[.strokeColor] = color
+            attrs[.strokeWidth] = -max(3, size * 0.08)  // negative → fill + stroke
+        } else {
+            attrs[.foregroundColor] = color
+        }
+        return attrs
+    }
+}
+
 struct AnnotationStyle {
     var color: NSColor
     var lineWidth: CGFloat
     var fontSize: CGFloat
     var arrowStyle: ArrowStyle = .straight
+    var textStyle: TextStyle = .standard
 
     static let `default` = AnnotationStyle(color: .systemRed, lineWidth: 9, fontSize: 27)
 }
@@ -91,17 +150,18 @@ struct Annotation: Identifiable {
     }
 }
 
-/// Height (image-pixel space) text needs at a given box width and font size.
+/// Height (image-pixel space) text needs at a given box width and style.
 /// Shared by inline editing (commit/refit) and toolbar size changes.
-func fittedTextHeight(_ text: String, width: CGFloat, fontSize: CGFloat) -> CGFloat {
-    guard !text.isEmpty, width > 1 else { return fontSize * 1.4 }
-    let attrs: [NSAttributedString.Key: Any] = [
-        .font: NSFont.systemFont(ofSize: fontSize, weight: .semibold),
-    ]
+func fittedTextHeight(_ text: String, width: CGFloat, fontSize: CGFloat,
+                      textStyle: TextStyle = .standard) -> CGFloat {
+    let pad = textStyle.boxPadding(for: fontSize)
+    let textWidth = max(width - pad * 2, 1)
+    guard !text.isEmpty, textWidth > 1 else { return fontSize * 1.4 + pad * 2 }
+    let attrs: [NSAttributedString.Key: Any] = [.font: textStyle.font(size: fontSize)]
     let attr = NSAttributedString(string: text, attributes: attrs)
     let fs = CTFramesetterCreateWithAttributedString(attr)
     let size = CTFramesetterSuggestFrameSizeWithConstraints(
         fs, CFRange(location: 0, length: attr.length), nil,
-        CGSize(width: width, height: .greatestFiniteMagnitude), nil)
-    return max(ceil(size.height), fontSize * 1.4)
+        CGSize(width: textWidth, height: .greatestFiniteMagnitude), nil)
+    return max(ceil(size.height), fontSize * 1.4) + pad * 2
 }
