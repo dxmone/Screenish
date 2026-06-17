@@ -16,7 +16,7 @@ struct EditorToolbar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
+            FlowLayout(hSpacing: 4, vSpacing: 6) {
                 ForEach(EditorTool.allCases) { tool in
                     ToolButton(tool: tool, isSelected: document.tool == tool,
                                action: { document.tool = tool },
