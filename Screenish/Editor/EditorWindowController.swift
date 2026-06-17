@@ -70,6 +70,9 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
+        // Safety net: dismiss the shared color panel if it was ever opened, so it
+        // can't outlive the editor window.
+        NSColorPanel.shared.close()
         onClosed?()
     }
 }

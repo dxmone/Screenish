@@ -25,8 +25,7 @@ struct EditorToolbar: View {
 
                 Divider().frame(height: 20)
 
-                ColorPicker("", selection: colorBinding)
-                    .labelsHidden()
+                SwatchColorPicker(color: colorBinding)
                     .onHover { setHelp(String(localized: "Color"), $0) }
                 Stepper(value: lineWidthBinding, in: 1...40, step: 1) {
                     Image(systemName: "lineweight")
@@ -113,7 +112,15 @@ struct EditorToolbar: View {
     private var colorBinding: Binding<Color> {
         Binding(
             get: { Color(nsColor: document.style.color) },
-            set: { document.style.color = NSColor($0); document.applyStyleToSelection() }
+            // ColorPicker re-writes the *current* value back on every view-update
+            // pass. Mutating @Published state for those no-op writes triggers
+            // "Publishing changes from within view updates" and drops the real
+            // change. Skip writes that don't actually change the color.
+            set: { newColor in
+                guard newColor != Color(nsColor: document.style.color) else { return }
+                document.style.color = NSColor(newColor)
+                document.applyStyleToSelection()
+            }
         )
     }
 
