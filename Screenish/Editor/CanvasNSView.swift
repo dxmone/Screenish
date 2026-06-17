@@ -128,7 +128,10 @@ final class CanvasNSView: NSView {
                            cornerHeight: radius, transform: nil))
         ctx.clip()
         if l.insetPx > 0 {
-            ctx.setFillColor(bg.insetColor.cgColor)
+            let insetColor = BackgroundRenderer.resolvedInsetColor(
+                style: bg, sampleImage: document.baseImage,
+                cachedAverage: document.baseAverageColor)
+            ctx.setFillColor(insetColor.cgColor)
             ctx.fill(cardRect)
         }
         ctx.saveGState()

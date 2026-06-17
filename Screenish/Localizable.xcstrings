@@ -100,6 +100,16 @@
         }
       }
     },
+    "Balance" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Balansera"
+          }
+        }
+      }
+    },
     "Blur" : {
       "localizations" : {
         "sv" : {
@@ -116,6 +126,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gör ett område oskarpt för att dölja känslig info"
+          }
+        }
+      }
+    },
+    "Boxed" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruta"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avbryt"
           }
         }
       }
@@ -253,6 +283,16 @@
         }
       }
     },
+    "Delete" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta bort"
+          }
+        }
+      }
+    },
     "Delete selected" : {
       "localizations" : {
         "sv" : {
@@ -373,6 +413,16 @@
         }
       }
     },
+    "Facebook/LinkedIn 1.91:1" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Facebook/LinkedIn 1.91:1"
+          }
+        }
+      }
+    },
     "Fill" : {
       "localizations" : {
         "sv" : {
@@ -424,12 +474,21 @@
       }
     },
     "Inset" : {
-      "extractionState" : "stale",
       "localizations" : {
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Inramning"
+          }
+        }
+      }
+    },
+    "Instagram 4:5" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instagram 4:5"
           }
         }
       }
@@ -474,6 +533,26 @@
         }
       }
     },
+    "Monospaced" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monospace"
+          }
+        }
+      }
+    },
+    "Monospaced Boxed" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monospace-ruta"
+          }
+        }
+      }
+    },
     "No background" : {
       "localizations" : {
         "sv" : {
@@ -484,12 +563,32 @@
         }
       }
     },
+    "No saved presets" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inga sparade förinställningar"
+          }
+        }
+      }
+    },
     "Open editor after capture" : {
       "localizations" : {
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Öppna redigeraren efter tagen bild"
+          }
+        }
+      }
+    },
+    "Outlined" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konturerad"
           }
         }
       }
@@ -514,6 +613,16 @@
         }
       }
     },
+    "Pinterest 2:3" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinterest 2:3"
+          }
+        }
+      }
+    },
     "Pixelate" : {
       "localizations" : {
         "sv" : {
@@ -530,6 +639,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pixelera ett område för att dölja känslig info"
+          }
+        }
+      }
+    },
+    "Preset" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Förinställning"
+          }
+        }
+      }
+    },
+    "Preset name" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Namn på förinställning"
           }
         }
       }
@@ -617,12 +746,52 @@
     "Reveal Crash Logs" : {
 
     },
+    "Rounded" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rundad"
+          }
+        }
+      }
+    },
+    "Rounded Boxed" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rundad ruta"
+          }
+        }
+      }
+    },
     "Save" : {
       "localizations" : {
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Spara"
+          }
+        }
+      }
+    },
+    "Save current…" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spara nuvarande…"
+          }
+        }
+      }
+    },
+    "Save preset" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spara förinställning"
           }
         }
       }
@@ -713,6 +882,16 @@
         }
       }
     },
+    "Social size" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Social storlek"
+          }
+        }
+      }
+    },
     "Solid" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -744,6 +923,26 @@
         }
       }
     },
+    "Standard" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        }
+      }
+    },
+    "Story 9:16" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Story 9:16"
+          }
+        }
+      }
+    },
     "System" : {
       "localizations" : {
         "sv" : {
@@ -764,36 +963,22 @@
         }
       }
     },
-    "Standard" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Standard" } } }
-    },
-    "Rounded" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Rundad" } } }
-    },
-    "Monospaced" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Monospace" } } }
-    },
-    "Outlined" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Konturerad" } } }
-    },
-    "Boxed" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Ruta" } } }
-    },
-    "Rounded Boxed" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Rundad ruta" } } }
-    },
-    "Monospaced Boxed" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Monospace-ruta" } } }
-    },
-    "Text style" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Textstil" } } }
-    },
     "Text size" : {
       "localizations" : {
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Textstorlek"
+          }
+        }
+      }
+    },
+    "Text style" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Textstil"
           }
         }
       }
@@ -814,6 +999,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ångra"
+          }
+        }
+      }
+    },
+    "YouTube 16:9" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YouTube 16:9"
           }
         }
       }

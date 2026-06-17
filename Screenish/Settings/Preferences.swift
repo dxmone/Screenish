@@ -16,6 +16,7 @@ enum Prefs {
     static let removeAfterDragKey = "removeAfterDrag"
     static let openEditorAfterCaptureKey = "openEditorAfterCapture"
     static let defaultBackgroundKey = "defaultBackgroundStyle"
+    static let savedPresetsKey = "beautyPresets"
 
     /// Register defaults that differ from the zero value (hideAtLaunch is on).
     static func registerDefaults() {
@@ -73,6 +74,21 @@ enum Prefs {
         set {
             if let data = try? JSONEncoder().encode(newValue) {
                 UserDefaults.standard.set(data, forKey: defaultBackgroundKey)
+            }
+        }
+    }
+
+    /// Named beautify presets the user has saved.
+    static var savedPresets: [BeautyPreset] {
+        get {
+            guard let data = UserDefaults.standard.data(forKey: savedPresetsKey),
+                  let presets = try? JSONDecoder().decode([BeautyPreset].self, from: data)
+            else { return [] }
+            return presets
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                UserDefaults.standard.set(data, forKey: savedPresetsKey)
             }
         }
     }

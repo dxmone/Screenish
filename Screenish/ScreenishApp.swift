@@ -136,6 +136,14 @@ final class AppCoordinator {
         }
     }
 
+    /// Discard a shot from the stack and close any editor open for it, so a removed
+    /// shot never leaves an orphaned editor window behind. Used by the Stack's
+    /// dismiss / remove / drag-out actions.
+    func discardShot(_ shot: Shot) {
+        editors[shot.id]?.close()   // sync close → windowWillClose → onClosed clears the dict
+        store.remove(shot)
+    }
+
     /// Open (or focus) the annotation editor for a Shot.
     func openEditor(for shot: Shot) {
         Log.breadcrumb("openEditor \(shot.id) existing=\(self.editors[shot.id] != nil)")

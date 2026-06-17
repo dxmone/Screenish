@@ -82,8 +82,8 @@ struct StackItemView: View {
                     onHoverChange: { hovering = $0 },
                     onSaveToFolder: { saveToFolder() },
                     onCopy: { Pasteboard.copy(shot.cgImage) },
-                    onRemove: { store.remove(shot) },
-                    onDelivered: { if Prefs.removeAfterDrag { store.remove(shot) } }
+                    onRemove: { AppCoordinator.shared.discardShot(shot) },
+                    onDelivered: { if Prefs.removeAfterDrag { AppCoordinator.shared.discardShot(shot) } }
                 )
             }
             // Added last → sits above the drag overlay so its taps win.
@@ -93,7 +93,7 @@ struct StackItemView: View {
     @ViewBuilder private var dismissButton: some View {
         if hovering {
             Button {
-                store.remove(shot)
+                AppCoordinator.shared.discardShot(shot)
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 16))

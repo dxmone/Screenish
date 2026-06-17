@@ -11,13 +11,20 @@ import SwiftUI
 struct InspectorPanel: View {
     @ObservedObject var document: EditorDocument
 
+    @State private var presets: [BeautyPreset] = Prefs.savedPresets
+    @State private var showingSaveDialog = false
+    @State private var newPresetName = ""
+    @State private var selectedPresetID: BeautyPreset.ID?
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Background")
                     .font(.headline)
 
+                presetRow
                 paddingRow
+                insetSection
                 slider("Corner Radius", value: cornerBinding, range: 0...0.2)
                 slider("Shadow", value: shadowBinding, range: 0...0.8)
                 backgroundPicker
@@ -27,6 +34,93 @@ struct InspectorPanel: View {
             .padding(.vertical, 18)
         }
         .frame(width: 248)
+        .alert("Save preset", isPresented: $showingSaveDialog) {
+            TextField("Preset name", text: $newPresetName)
+            Button("Save") { savePreset() }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    // MARK: - Presets
+
+    private var presetRow: some View {
+        HStack {
+            Text("Preset").font(.subheadline).foregroundStyle(.secondary)
+            Spacer()
+            Menu {
+                if presets.isEmpty {
+                    Text("No saved presets").disabled(true)
+                } else {
+                    ForEach(presets) { preset in
+                        Button {
+                            applyPreset(preset)
+                        } label: {
+                            // Checkmark marks the active preset in the list.
+                            Label(preset.name, systemImage:
+                                    preset.id == selectedPresetID ? "checkmark" : "")
+                        }
+                    }
+                    Menu("Delete") {
+                        ForEach(presets) { preset in
+                            Button(preset.name, role: .destructive) { deletePreset(preset) }
+                        }
+                    }
+                }
+                Divider()
+                Button("Save current…") { newPresetName = ""; showingSaveDialog = true }
+            } label: {
+                Text(selectedPresetName)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .frame(width: 130)
+        }
+    }
+
+    /// Name shown on the preset button — the active preset, or a placeholder.
+    private var selectedPresetName: String {
+        presets.first { $0.id == selectedPresetID }?.name ?? String(localized: "Preset")
+    }
+
+    private func applyPreset(_ preset: BeautyPreset) {
+        document.beginInteraction()
+        document.background = preset.style
+        selectedPresetID = preset.id
+    }
+
+    private func savePreset() {
+        let name = newPresetName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        let preset = BeautyPreset(name: name, style: document.background)
+        var list = Prefs.savedPresets
+        list.append(preset)
+        Prefs.savedPresets = list
+        presets = list
+        selectedPresetID = preset.id   // a just-saved preset is the active one
+    }
+
+    private func deletePreset(_ preset: BeautyPreset) {
+        var list = Prefs.savedPresets
+        list.removeAll { $0.id == preset.id }
+        Prefs.savedPresets = list
+        presets = list
+        if selectedPresetID == preset.id { selectedPresetID = nil }
+    }
+
+    // MARK: - Inset
+
+    private var insetSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            slider("Inset", value: insetBinding, range: 0...0.06)
+            HStack {
+                Toggle("Balance", isOn: balanceBinding)
+                    .toggleStyle(.checkbox)
+                Spacer()
+                if !document.background.balanceInset {
+                    ColorPicker("", selection: insetColorBinding).labelsHidden()
+                }
+            }
+        }
     }
 
     // MARK: - Background fill
@@ -87,13 +181,26 @@ struct InspectorPanel: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Aspect Ratio").font(.subheadline).foregroundStyle(.secondary)
             Picker("", selection: ratioBinding) {
-                ForEach(AspectRatioOption.allCases) { option in
+                ForEach(AspectRatioOption.basic) { option in
                     Text(option.label).tag(option)
                 }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
+
+            Menu {
+                ForEach(AspectRatioOption.social) { option in
+                    Button(option.label) { ratioBinding.wrappedValue = option }
+                }
+            } label: {
+                Label(socialMenuLabel, systemImage: "rectangle.portrait.on.rectangle.portrait")
+            }
         }
+    }
+
+    private var socialMenuLabel: String {
+        AspectRatioOption.social.contains(document.background.ratio)
+            ? document.background.ratio.label : String(localized: "Social size")
     }
 
     /// Fine-grained padding slider over a small amount range (no percentage,
@@ -141,6 +248,18 @@ struct InspectorPanel: View {
     private var paddingSliderBinding: Binding<Double> {
         Binding(get: { Double(document.background.paddingFraction * 750) },
                 set: { document.background.paddingFraction = CGFloat($0) / 750 })
+    }
+    private var insetBinding: Binding<Double> {
+        Binding(get: { Double(document.background.insetFraction) },
+                set: { document.background.insetFraction = CGFloat($0) })
+    }
+    private var insetColorBinding: Binding<Color> {
+        Binding(get: { Color(nsColor: document.background.insetColor) },
+                set: { document.beginInteraction(); document.background.insetColor = NSColor($0) })
+    }
+    private var balanceBinding: Binding<Bool> {
+        Binding(get: { document.background.balanceInset },
+                set: { document.beginInteraction(); document.background.balanceInset = $0 })
     }
     private var cornerBinding: Binding<Double> {
         Binding(get: { Double(document.background.cornerRadiusFraction) },
