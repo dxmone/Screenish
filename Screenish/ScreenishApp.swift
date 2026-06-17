@@ -155,7 +155,7 @@ final class AppCoordinator {
             shot: shot,
             onDone: { [weak self] annotations, cropRect, background in
                 guard let self else { return }
-                Prefs.defaultBackground = background   // remember beautify for next captures
+                Prefs.lastUsedBackground = background   // remember beautify for next captures
                 if let rendered = self.store.applyEdits(shot, annotations: annotations,
                                                         cropRect: cropRect, background: background) {
                     Pasteboard.copy(rendered)

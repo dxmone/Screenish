@@ -17,6 +17,7 @@ enum Prefs {
     static let openEditorAfterCaptureKey = "openEditorAfterCapture"
     static let defaultBackgroundKey = "defaultBackgroundStyle"
     static let savedPresetsKey = "beautyPresets"
+    static let defaultPresetKey = "defaultPresetID"
 
     /// Register defaults that differ from the zero value (hideAtLaunch is on).
     static func registerDefaults() {
@@ -56,9 +57,9 @@ enum Prefs {
         UserDefaults.standard.bool(forKey: openEditorAfterCaptureKey)
     }
 
-    /// Remembered beautify style, applied to new captures and updated on each edit.
-    /// First run defaults to a gentle gradient with a little padding.
-    static var defaultBackground: BackgroundStyle {
+    /// Last-used beautify style, updated on each edit (Done). First run is a gentle
+    /// gradient with a little padding.
+    static var lastUsedBackground: BackgroundStyle {
         get {
             guard let data = UserDefaults.standard.data(forKey: defaultBackgroundKey),
                   let style = try? JSONDecoder().decode(BackgroundStyle.self, from: data)
@@ -76,6 +77,21 @@ enum Prefs {
                 UserDefaults.standard.set(data, forKey: defaultBackgroundKey)
             }
         }
+    }
+
+    /// A pinned default preset, if the user set one. Overrides last-used for new captures.
+    static var defaultPresetID: UUID? {
+        get { UserDefaults.standard.string(forKey: defaultPresetKey).flatMap(UUID.init) }
+        set { UserDefaults.standard.set(newValue?.uuidString, forKey: defaultPresetKey) }
+    }
+
+    /// Beautify applied to a new capture: the pinned default preset if set (and it
+    /// still exists), otherwise the last-used style.
+    static var defaultBackground: BackgroundStyle {
+        if let id = defaultPresetID, let preset = savedPresets.first(where: { $0.id == id }) {
+            return preset.style
+        }
+        return lastUsedBackground
     }
 
     /// Named beautify presets the user has saved.

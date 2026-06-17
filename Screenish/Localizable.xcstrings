@@ -110,6 +110,12 @@
         }
       }
     },
+    "Set as default" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Sätt som standard" } } }
+    },
+    "None" : {
+      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Ingen" } } }
+    },
     "Blur" : {
       "localizations" : {
         "sv" : {

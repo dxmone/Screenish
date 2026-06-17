@@ -15,6 +15,7 @@ struct InspectorPanel: View {
     @State private var showingSaveDialog = false
     @State private var newPresetName = ""
     @State private var selectedPresetID: BeautyPreset.ID?
+    @State private var defaultPresetID: BeautyPreset.ID? = Prefs.defaultPresetID
 
     var body: some View {
         ScrollView {
@@ -39,6 +40,18 @@ struct InspectorPanel: View {
             Button("Save") { savePreset() }
             Button("Cancel", role: .cancel) {}
         }
+        .onAppear(perform: matchSelectedPreset)
+    }
+
+    /// Show the active preset's name when the shot opened with a style that matches
+    /// a saved preset (e.g. a new capture using the pinned default preset).
+    private func matchSelectedPreset() {
+        guard selectedPresetID == nil else { return }
+        if let id = defaultPresetID, presets.first(where: { $0.id == id })?.style == document.background {
+            selectedPresetID = id
+        } else if let match = presets.first(where: { $0.style == document.background }) {
+            selectedPresetID = match.id
+        }
     }
 
     // MARK: - Presets
@@ -55,9 +68,19 @@ struct InspectorPanel: View {
                         Button {
                             applyPreset(preset)
                         } label: {
-                            // Checkmark marks the active preset in the list.
-                            Label(preset.name, systemImage:
-                                    preset.id == selectedPresetID ? "checkmark" : "")
+                            // Active preset gets a check; the pinned default a star.
+                            let icon = preset.id == defaultPresetID ? "star.fill"
+                                : (preset.id == selectedPresetID ? "checkmark" : "")
+                            Label(preset.name, systemImage: icon)
+                        }
+                    }
+                    Menu("Set as default") {
+                        ForEach(presets) { preset in
+                            Button(preset.name) { setDefaultPreset(preset) }
+                        }
+                        if defaultPresetID != nil {
+                            Divider()
+                            Button("None") { clearDefaultPreset() }
                         }
                     }
                     Menu("Delete") {
@@ -105,6 +128,17 @@ struct InspectorPanel: View {
         Prefs.savedPresets = list
         presets = list
         if selectedPresetID == preset.id { selectedPresetID = nil }
+        if defaultPresetID == preset.id { clearDefaultPreset() }
+    }
+
+    private func setDefaultPreset(_ preset: BeautyPreset) {
+        Prefs.defaultPresetID = preset.id
+        defaultPresetID = preset.id
+    }
+
+    private func clearDefaultPreset() {
+        Prefs.defaultPresetID = nil
+        defaultPresetID = nil
     }
 
     // MARK: - Inset
