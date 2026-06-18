@@ -31,6 +31,11 @@ final class SelectionOverlayController {
     private var hoverWindowID: CGWindowID?
     private var hoverRectGlobal: CGRect?
 
+    // Window-mode snapshot. The on-screen window list is captured once on entry so
+    // hover hit-tests are a cheap point-in-rect scan instead of a window-server
+    // round-trip per mouseMoved (issue #13). Cleared in finish().
+    private var windowSnapshot: WindowPicker.Snapshot?
+
     func present(mode: OverlayMode) async -> OverlayResult {
         // Defensive: never overwrite a live continuation (would leak it). Resume
         // and tear down any previous session first.
@@ -49,6 +54,8 @@ final class SelectionOverlayController {
             self.dragCurrentGlobal = nil
             self.hoverWindowID = nil
             self.hoverRectGlobal = nil
+            // Snapshot the window list once on entry; per-move hit-tests scan it.
+            self.windowSnapshot = mode == .window ? WindowPicker.snapshot() : nil
 
             for screen in NSScreen.screens {
                 let win = OverlayWindow(contentRect: screen.frame,
@@ -110,7 +117,8 @@ final class SelectionOverlayController {
 
     func moved(to global: CGPoint) {
         guard mode == .window else { return }
-        if let (id, rect) = WindowPicker.window(atGlobalPoint: global) {
+        if let snapshot = windowSnapshot,
+           let (id, rect) = snapshot.window(atGlobalPoint: global) {
             hoverWindowID = id
             hoverRectGlobal = rect
         } else {
@@ -140,6 +148,7 @@ final class SelectionOverlayController {
         windows.forEach { $0.orderOut(nil) }
         windows.removeAll()
         views.removeAll()
+        windowSnapshot = nil
         continuation?.resume(returning: result)
         continuation = nil
     }
@@ -271,33 +280,55 @@ final class SelectionView: NSView {
 }
 
 /// Finds the frontmost on-screen window under a global (AppKit) point.
+///
+/// The expensive part — the `CGWindowListCopyWindowInfo` round-trip plus parsing
+/// of bridged dictionaries — is done once via `snapshot()`. The resulting
+/// `Snapshot` answers per-point hover queries with a cheap point-in-rect scan,
+/// so window-mode mouseMoved no longer re-queries the window server (issue #13).
 enum WindowPicker {
-    static func window(atGlobalPoint global: CGPoint) -> (CGWindowID, CGRect)? {
-        guard let primary = NSScreen.screens.first else { return nil }
-        let primaryHeight = primary.frame.height
-        // AppKit global (bottom-left) → CoreGraphics global (top-left).
-        let cgPoint = CGPoint(x: global.x, y: primaryHeight - global.y)
+    /// A captured-once list of eligible on-screen windows (own-PID excluded,
+    /// layer 0 only), in front-to-back order, with their CoreGraphics rects.
+    struct Snapshot {
+        /// (window id, CoreGraphics top-left rect), front-to-back as returned by
+        /// CGWindowListCopyWindowInfo.
+        let windows: [(id: CGWindowID, cgRect: CGRect)]
 
+        /// Frontmost window under a global (AppKit, bottom-left) point.
+        func window(atGlobalPoint global: CGPoint) -> (CGWindowID, CGRect)? {
+            guard let primary = NSScreen.screens.first else { return nil }
+            let primaryHeight = primary.frame.height
+            // AppKit global (bottom-left) → CoreGraphics global (top-left).
+            let cgPoint = CGPoint(x: global.x, y: primaryHeight - global.y)
+
+            for entry in windows where entry.cgRect.contains(cgPoint) {
+                // CoreGraphics rect → AppKit global rect.
+                let appKitRect = CGRect(x: entry.cgRect.minX,
+                                        y: primaryHeight - entry.cgRect.maxY,
+                                        width: entry.cgRect.width,
+                                        height: entry.cgRect.height)
+                return (entry.id, appKitRect)
+            }
+            return nil
+        }
+    }
+
+    /// Capture the current on-screen window list once (window-server round-trip).
+    static func snapshot() -> Snapshot {
         let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
         guard let infos = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
-            as? [[String: Any]] else { return nil }
+            as? [[String: Any]] else { return Snapshot(windows: []) }
 
         let ownPID = ProcessInfo.processInfo.processIdentifier
+        var windows: [(id: CGWindowID, cgRect: CGRect)] = []
         for info in infos {
             guard let layer = info[kCGWindowLayer as String] as? Int, layer == 0,
                   let pid = info[kCGWindowOwnerPID as String] as? Int32, pid != ownPID,
                   let idNum = info[kCGWindowNumber as String] as? CGWindowID,
                   let boundsDict = info[kCGWindowBounds as String] as? [String: CGFloat],
                   let cgRect = cgRect(from: boundsDict) else { continue }
-            if cgRect.contains(cgPoint) {
-                // CoreGraphics rect → AppKit global rect.
-                let appKitRect = CGRect(x: cgRect.minX,
-                                        y: primaryHeight - cgRect.maxY,
-                                        width: cgRect.width, height: cgRect.height)
-                return (idNum, appKitRect)
-            }
+            windows.append((id: idNum, cgRect: cgRect))
         }
-        return nil
+        return Snapshot(windows: windows)
     }
 
     private static func cgRect(from dict: [String: CGFloat]) -> CGRect? {
