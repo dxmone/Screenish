@@ -86,10 +86,85 @@ final class CanvasNSView: NSView {
     }
 
     // MARK: - Drawing
+    //
+    // The static layers (neutral margin + background fill + drop shadow + rounded
+    // card + inset + base-image blit) are identical from frame to frame during an
+    // annotation drag, yet they dominate the redraw cost (multi-megapixel base
+    // blit + gradient + shadow). Cache them as a backing-resolution CGImage and
+    // blit it each frame; only annotations are redrawn live on top. The cache is
+    // keyed on everything that affects those layers (view pixel size, background,
+    // crop, base-image identity) and rebuilt when any of those change.
+
+    private var staticLayerCache: CGImage?
+    private struct StaticLayerKey: Equatable {
+        var pixelWidth: Int
+        var pixelHeight: Int
+        var background: Screenish.BackgroundStyle
+        var cropRect: CGRect?
+        var baseImage: ObjectIdentifier
+    }
+    private var staticLayerKey: StaticLayerKey?
 
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext else { return }
+        let l = bgLayout
+
+        // Static layers (margin + background + shadow + card + inset + base blit),
+        // cached at backing resolution and reused until the key changes.
+        let backing = convertToBacking(bounds)
+        let pixelW = max(1, Int(backing.width.rounded()))
+        let pixelH = max(1, Int(backing.height.rounded()))
+        let key = StaticLayerKey(pixelWidth: pixelW, pixelHeight: pixelH,
+                                 background: document.background, cropRect: document.cropRect,
+                                 baseImage: ObjectIdentifier(document.baseImage))
+        if staticLayerKey != key || staticLayerCache == nil {
+            staticLayerCache = renderStaticLayers(pixelWidth: pixelW, pixelHeight: pixelH)
+            staticLayerKey = key
+        }
+        if let cached = staticLayerCache {
+            // The bitmap is rendered top-left origin (row 0 = top). This view is
+            // flipped, so blit with a local flip to keep it upright on screen.
+            ctx.saveGState()
+            ctx.translateBy(x: 0, y: bounds.height)
+            ctx.scaleBy(x: 1, y: -1)
+            ctx.draw(cached, in: bounds)
+            ctx.restoreGState()
+        }
+
+        // Annotations in original-image space, shifted by the crop origin and
+        // clipped to the crop region (so annotations outside the crop are hidden,
+        // matching the exported image). Drawn live every frame on top of the
+        // cached static bitmap.
+        ctx.saveGState()
+        ctx.translateBy(x: offset.x, y: offset.y)
+        ctx.scaleBy(x: scale, y: scale)
+        ctx.translateBy(x: l.innerOrigin.x - cropOrigin.x, y: l.innerOrigin.y - cropOrigin.y)
+        ctx.clip(to: CGRect(origin: cropOrigin, size: innerSize))
+        for annotation in document.annotations where annotation.id != editingAnnotationID {
+            AnnotationDrawer.draw(annotation, in: ctx, base: document.baseImage)
+        }
+        if let draft { AnnotationDrawer.draw(draft, in: ctx, base: document.baseImage) }
+        ctx.restoreGState()
+
+        drawCropOverlay(ctx)
+        drawSelectionHandles(ctx)
+    }
+
+    /// Render the static layers into a backing-resolution bitmap. The composite
+    /// transform (offset/scale) is baked in at backing scale so the result blits
+    /// 1:1 over `bounds` and is pixel-identical to drawing them directly.
+    private func renderStaticLayers(pixelWidth: Int, pixelHeight: Int) -> CGImage? {
         let space = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(
+            data: nil, width: pixelWidth, height: pixelHeight, bitsPerComponent: 8,
+            bytesPerRow: 0, space: space,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+
+        // The bitmap is bottom-left origin; flip to match the view's top-left
+        // (flipped) coordinate space, then scale points → backing pixels.
+        let backingScale = bounds.height > 0 ? CGFloat(pixelHeight) / bounds.height : 1
+        ctx.translateBy(x: 0, y: CGFloat(pixelHeight))
+        ctx.scaleBy(x: backingScale, y: -backingScale)
 
         ctx.setFillColor(NSColor.underPageBackgroundColor.cgColor)
         ctx.fill(bounds)
@@ -143,22 +218,8 @@ final class CanvasNSView: NSView {
         ctx.restoreGState()
         ctx.restoreGState()
 
-        // Annotations in original-image space, shifted by the crop origin and
-        // clipped to the crop region (so annotations outside the crop are hidden,
-        // matching the exported image).
-        ctx.saveGState()
-        ctx.translateBy(x: l.innerOrigin.x - cropOrigin.x, y: l.innerOrigin.y - cropOrigin.y)
-        ctx.clip(to: CGRect(origin: cropOrigin, size: innerSize))
-        for annotation in document.annotations where annotation.id != editingAnnotationID {
-            AnnotationDrawer.draw(annotation, in: ctx, base: document.baseImage)
-        }
-        if let draft { AnnotationDrawer.draw(draft, in: ctx, base: document.baseImage) }
-        ctx.restoreGState()
-
         ctx.restoreGState() // composite transform
-
-        drawCropOverlay(ctx)
-        drawSelectionHandles(ctx)
+        return ctx.makeImage()
     }
 
     private func drawSelectionHandles(_ ctx: CGContext) {

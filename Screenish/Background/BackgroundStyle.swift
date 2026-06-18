@@ -126,12 +126,23 @@ struct BackgroundStyle: Equatable, Codable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        paddingFraction = try c.decode(CGFloat.self, forKey: .paddingFraction)
-        insetFraction = try c.decode(CGFloat.self, forKey: .insetFraction)
+        // Reject non-finite / out-of-range fractions on decode: a corrupt or
+        // hostile value would otherwise trap in BackgroundRenderer.wrap's
+        // Int(outerSize) cast (hard crash on the next capture) or request a huge
+        // bitmap. Fall back to the property default, then clamp to the documented
+        // range. Defaults are taken from the freshly-initialised properties above.
+        func clamped(_ key: CodingKeys, default fallback: CGFloat,
+                     to range: ClosedRange<CGFloat>) throws -> CGFloat {
+            let raw = try c.decode(CGFloat.self, forKey: key)
+            let value = raw.isFinite ? raw : fallback
+            return min(max(value, range.lowerBound), range.upperBound)
+        }
+        paddingFraction = try clamped(.paddingFraction, default: paddingFraction, to: 0...0.4)
+        insetFraction = try clamped(.insetFraction, default: insetFraction, to: 0...0.1)
         insetColor = NSColor(hexRGBA: try c.decode(String.self, forKey: .insetColorHex)) ?? .white
-        cornerRadiusFraction = try c.decode(CGFloat.self, forKey: .cornerRadiusFraction)
-        shadowRadiusFraction = try c.decode(CGFloat.self, forKey: .shadowRadiusFraction)
-        shadowOpacity = try c.decode(CGFloat.self, forKey: .shadowOpacity)
+        cornerRadiusFraction = try clamped(.cornerRadiusFraction, default: cornerRadiusFraction, to: 0...0.25)
+        shadowRadiusFraction = try clamped(.shadowRadiusFraction, default: shadowRadiusFraction, to: 0...0.5)
+        shadowOpacity = try clamped(.shadowOpacity, default: shadowOpacity, to: 0...1)
         fill = try c.decode(BackgroundFill.self, forKey: .fill)
         ratio = try c.decode(AspectRatioOption.self, forKey: .ratio)
     }
