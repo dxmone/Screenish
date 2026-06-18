@@ -38,7 +38,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             notifyPreviousCrash()
         }
         if !Prefs.hideAtLaunch {
-            SettingsWindow.open()
+            // Defer one runloop tick: SwiftUI installs the main menu (which holds
+            // the Settings… item we trigger) right after launch finishes.
+            DispatchQueue.main.async { SettingsWindow.open() }
         }
     }
 

@@ -21,7 +21,7 @@ struct MenuContent: View {
 
         Divider()
 
-        Button("Settings…") { SettingsWindow.open() }
+        SettingsLink { Text("Settings…") }
             .keyboardShortcut(",", modifiers: .command)
 
         Button("Reveal Crash Logs") { CrashReporter.revealInFinder() }

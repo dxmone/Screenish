@@ -29,12 +29,25 @@ struct SettingsView: View {
 }
 
 /// Opens the SwiftUI Settings scene AND activates the app, so the window lands
-/// in front for this menu-bar (accessory) app. `SettingsLink` gives no
-/// activation hook, hence the private selector.
+/// in front for this menu-bar (accessory) app. macOS 14 retired the
+/// `showSettingsWindow:` selector — it logs "Please use SettingsLink for opening
+/// the Settings scene." and does nothing — so we fire the same action the
+/// standard App ▸ Settings… menu item carries (the one `SettingsLink` triggers).
+/// Activation is handled by `SettingsView`'s `WindowAccessor`.
+@MainActor
 enum SettingsWindow {
     static func open() {
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        guard let item = settingsMenuItem(), let action = item.action else { return }
+        NSApp.sendAction(action, to: item.target, from: item)
+    }
+
+    /// The App ▸ Settings… item SwiftUI installs whenever a `Settings` scene exists.
+    private static func settingsMenuItem() -> NSMenuItem? {
+        NSApp.mainMenu?.items
+            .compactMap(\.submenu)
+            .flatMap(\.items)
+            .first { $0.keyEquivalent == "," && $0.keyEquivalentModifierMask == .command }
     }
 }
 
