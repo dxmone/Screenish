@@ -42,9 +42,32 @@ enum ShotDrag {
 
     private static let fm = FileManager.default
 
-    /// Save a shot to a folder with its user-facing name + format. Returns the URL.
+    /// Save a shot to a folder with its user-facing name + format. Throws so the
+    /// caller can alert the user instead of silently reporting success.
     @discardableResult
-    static func save(_ shot: Shot, to directory: URL) -> URL? {
-        ImageExport.write(shot.cgImage, to: directory, format: Prefs.format, date: shot.createdAt)
+    static func save(_ shot: Shot, to directory: URL) throws -> URL {
+        try ImageExport.write(shot.cgImage, to: directory, format: Prefs.format, date: shot.createdAt)
+    }
+
+    /// Modal alert telling the user a save failed — used by every save call site so a
+    /// failed write is never reported as success.
+    @MainActor
+    static func presentSaveError(_ error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = String(localized: "Couldn’t save the screenshot")
+        alert.informativeText = saveErrorMessage(error)
+        alert.runModal()
+    }
+
+    private static func saveErrorMessage(_ error: Error) -> String {
+        switch error {
+        case ImageExportError.encodeFailed:
+            return String(localized: "The image couldn’t be encoded.")
+        case ImageExportError.writeFailed(let underlying):
+            return underlying.localizedDescription
+        default:
+            return error.localizedDescription
+        }
     }
 }

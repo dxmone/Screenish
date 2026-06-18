@@ -112,8 +112,11 @@ struct StackItemView: View {
     }
 
     private func saveToFolder() {
-        if let url = ShotDrag.save(shot, to: Prefs.saveLocation) {
+        do {
+            let url = try ShotDrag.save(shot, to: Prefs.saveLocation)
             NSWorkspace.shared.activateFileViewerSelecting([url])
+        } catch {
+            ShotDrag.presentSaveError(error)
         }
     }
 }

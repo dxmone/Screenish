@@ -33,6 +33,12 @@ enum ImageFormat {
     }
 }
 
+/// A save failed in a way the user should hear about (encode or disk write).
+enum ImageExportError: Error {
+    case encodeFailed
+    case writeFailed(underlying: Error)
+}
+
 enum ImageExport {
 
     /// Per-launch temp directory holding shots until saved, dragged out, or quit.
@@ -107,22 +113,38 @@ enum ImageExport {
         return url
     }
 
-    /// Write a CGImage to a directory using the user-facing name + format.
+    /// Write a CGImage to a directory using the user-facing name + format. Creates
+    /// the directory if needed and uniques the filename on collision so a same-second
+    /// save never silently overwrites. Throws `ImageExportError` so callers can alert.
     @discardableResult
     static func write(_ cgImage: CGImage, to directory: URL,
-                      format: ImageFormat = Prefs.format, date: Date = Date()) -> URL? {
-        let url = directory.appendingPathComponent(fileName(for: date, format: format))
-        guard let data = encode(cgImage, as: format) else { return nil }
+                      format: ImageFormat = Prefs.format, date: Date = Date()) throws -> URL {
+        guard let data = encode(cgImage, as: format) else { throw ImageExportError.encodeFailed }
+        let fm = FileManager.default
         do {
+            try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+            let url = uniqueURL(in: directory, base: baseName(for: date), ext: format.ext)
             try data.write(to: url)
             return url
         } catch {
             NSLog("Screenish: write failed: \(error)")
-            return nil
+            throw ImageExportError.writeFailed(underlying: error)
         }
     }
 
-    /// Base name without extension, e.g. "Screenish 2026-06-15 kl 14.32".
+    /// First non-colliding URL: "<base>.ext", then "<base> 2.ext", "<base> 3.ext", …
+    private static func uniqueURL(in directory: URL, base: String, ext: String) -> URL {
+        let fm = FileManager.default
+        var url = directory.appendingPathComponent("\(base).\(ext)")
+        var n = 2
+        while fm.fileExists(atPath: url.path) {
+            url = directory.appendingPathComponent("\(base) \(n).\(ext)")
+            n += 1
+        }
+        return url
+    }
+
+    /// Base name without extension, e.g. "Screenish 2026-06-15 kl 14.32.05".
     static func baseName(for date: Date) -> String {
         "Screenish " + nameFormatter.string(from: date)
     }
@@ -134,7 +156,8 @@ enum ImageExport {
     private static let nameFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "sv_SE")
-        f.dateFormat = "yyyy-MM-dd 'kl' HH.mm"
+        // Seconds included so distinct same-minute saves get distinct names.
+        f.dateFormat = "yyyy-MM-dd 'kl' HH.mm.ss"
         return f
     }()
 }
