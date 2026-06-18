@@ -16,6 +16,19 @@ import CoreImage.CIFilterBuiltins
 enum AnnotationDrawer {
     static let ciContext = CIContext()
 
+    /// Cache of rendered redaction (blur/pixelate) bitmaps. Building one is
+    /// expensive (CIFilter + synchronous createCGImage readback) and it runs in
+    /// the per-redraw annotation loop, so reuse the output while the inputs are
+    /// unchanged. Main-thread only (all rendering is), so no locking is needed.
+    private struct RedactionKey: Hashable {
+        let kind: AnnotationKind
+        let x: Int, y: Int, w: Int, h: Int   // rect rounded to whole pixels
+        let amount: Int                       // derived blur radius / pixelate scale
+        let baseW: Int, baseH: Int
+    }
+    private static var redactionCache: [RedactionKey: CGImage] = [:]
+    private static let redactionCacheLimit = 64
+
     /// Draw a single annotation in image-pixel top-left space.
     static func draw(_ a: Annotation, in ctx: CGContext, base: CGImage) {
         switch a.kind {
@@ -265,6 +278,20 @@ enum AnnotationDrawer {
     /// Produce a blurred/pixelated copy of the base image region under `rect`
     /// (rect is top-left image-pixel space).
     private static func redactedImage(kind: AnnotationKind, rect: CGRect, base: CGImage) -> CGImage? {
+        // Derived strength is a function of the rect size (same as the filters below).
+        let amount: CGFloat
+        switch kind {
+        case .blur:     amount = max(8, min(rect.width, rect.height) / 8)
+        case .pixelate: amount = max(8, min(rect.width, rect.height) / 12)
+        default:        return nil
+        }
+        let key = RedactionKey(kind: kind,
+                               x: Int(rect.minX.rounded()), y: Int(rect.minY.rounded()),
+                               w: Int(rect.width.rounded()), h: Int(rect.height.rounded()),
+                               amount: Int(amount.rounded()),
+                               baseW: base.width, baseH: base.height)
+        if let cached = redactionCache[key] { return cached }
+
         let ciBase = CIImage(cgImage: base)
         let h = CGFloat(base.height)
         // top-left rect → CoreImage bottom-left rect
@@ -275,20 +302,26 @@ enum AnnotationDrawer {
         case .blur:
             let f = CIFilter.gaussianBlur()
             f.inputImage = ciBase.clampedToExtent()
-            f.radius = Float(max(8, min(rect.width, rect.height) / 8))
+            f.radius = Float(amount)
             guard let out = f.outputImage else { return nil }
             output = out.cropped(to: ciRect)
         case .pixelate:
             let f = CIFilter.pixellate()
             f.inputImage = ciBase.clampedToExtent()
-            f.scale = Float(max(8, min(rect.width, rect.height) / 12))
+            f.scale = Float(amount)
             f.center = CGPoint(x: ciRect.midX, y: ciRect.midY)
             guard let out = f.outputImage else { return nil }
             output = out.cropped(to: ciRect)
         default:
             return nil
         }
-        return ciContext.createCGImage(output, from: ciRect)
+        guard let image = ciContext.createCGImage(output, from: ciRect) else { return nil }
+
+        // Bound growth: clear when the working set outgrows the cap (a drag only
+        // touches one key at a time, so this rarely triggers).
+        if redactionCache.count >= redactionCacheLimit { redactionCache.removeAll(keepingCapacity: true) }
+        redactionCache[key] = image
+        return image
     }
 }
 
