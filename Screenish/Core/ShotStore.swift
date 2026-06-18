@@ -15,7 +15,9 @@ final class ShotStore: ObservableObject {
     /// Newest first.
     @Published private(set) var shots: [Shot] = []
 
-    /// Capture → temp file → Stack. Returns the created Shot, or nil on write failure.
+    /// Capture → Stack. The in-memory rendered composite is authoritative, so the
+    /// shot is built and shown synchronously; the PNG is encoded + written to its
+    /// deterministic temp URL off-main. Returns the created Shot.
     @discardableResult
     func add(_ capturedImage: CGImage) -> Shot? {
         let id = UUID()
@@ -23,16 +25,13 @@ final class ShotStore: ObservableObject {
         let rendered = background.isEmpty ? capturedImage
             : (EditorRenderer.renderComposite(base: capturedImage, annotations: [],
                                               cropRect: nil, background: background) ?? capturedImage)
-        do {
-            let url = try ImageExport.writeTemp(rendered, id: id)
-            let shot = Shot(id: id, baseImage: capturedImage, background: background,
-                            cgImage: rendered, tempURL: url)
-            shots.insert(shot, at: 0)
-            return shot
-        } catch {
-            NSLog("Screenish: failed to write temp shot: \(error)")
-            return nil
-        }
+        let thumbnail = ImageExport.thumbnail(rendered)
+        let url = ImageExport.tempURL(for: id)
+        let shot = Shot(id: id, baseImage: capturedImage, background: background,
+                        cgImage: rendered, thumbnail: thumbnail, tempURL: url)
+        shots.insert(shot, at: 0)
+        Self.writeTempOffMain(rendered, to: url)
+        return shot
     }
 
     /// Apply edited annotations/crop to a Shot non-destructively: keep the original
@@ -47,16 +46,33 @@ final class ShotStore: ObservableObject {
         let rendered = EditorRenderer.renderComposite(base: base, annotations: annotations,
                                                       cropRect: cropRect,
                                                       background: background) ?? base
-        do {
-            let url = try ImageExport.writeTemp(rendered, id: shot.id)
-            shots[idx] = Shot(id: shot.id, baseImage: base, annotations: annotations,
-                              cropRect: cropRect, background: background, cgImage: rendered,
-                              tempURL: url, createdAt: shot.createdAt,
-                              revision: shot.revision + 1)
-            return rendered
-        } catch {
-            NSLog("Screenish: failed to update shot: \(error)")
-            return nil
+        let thumbnail = ImageExport.thumbnail(rendered)
+        let url = ImageExport.tempURL(for: shot.id)
+        shots[idx] = Shot(id: shot.id, baseImage: base, annotations: annotations,
+                          cropRect: cropRect, background: background, cgImage: rendered,
+                          thumbnail: thumbnail, tempURL: url, createdAt: shot.createdAt,
+                          revision: shot.revision + 1)
+        Self.writeTempOffMain(rendered, to: url)
+        return rendered
+    }
+
+    /// PNG-encode + write a composite to its temp URL off the main actor. The
+    /// in-memory `cgImage` is authoritative, so failures are logged, not surfaced.
+    /// CGImage isn't Sendable but is immutable and safe to read off-main, so it's
+    /// passed through a minimal `@unchecked Sendable` box.
+    private static func writeTempOffMain(_ cgImage: CGImage, to url: URL) {
+        struct Box: @unchecked Sendable { let image: CGImage }
+        let box = Box(image: cgImage)
+        Task.detached(priority: .utility) {
+            guard let data = ImageExport.encode(box.image, as: .png) else {
+                NSLog("Screenish: failed to encode temp shot at \(url.lastPathComponent)")
+                return
+            }
+            do {
+                try data.write(to: url)
+            } catch {
+                NSLog("Screenish: failed to write temp shot: \(error)")
+            }
         }
     }
 

@@ -68,11 +68,17 @@ struct EditorView: View {
     }
 
     private func save() {
-        if let image = render(),
-           let url = ImageExport.write(image, to: Prefs.saveLocation) {
-            NSWorkspace.shared.activateFileViewerSelecting([url])
+        guard let image = render() else {
+            ShotDrag.presentSaveError(ImageExportError.encodeFailed)
+            return   // keep the editor open so the user can retry
         }
-        done()   // persist edits + close the editor
+        do {
+            let url = try ImageExport.write(image, to: Prefs.saveLocation)
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+            done()   // persist edits + close the editor only on success
+        } catch {
+            ShotDrag.presentSaveError(error)   // failed → leave the editor open
+        }
     }
 
     private func done() {

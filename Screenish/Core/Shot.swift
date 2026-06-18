@@ -18,19 +18,22 @@ struct Shot: Identifiable, Hashable {
     var cropRect: CGRect?         // editable crop (image-pixel space)
     var background: BackgroundStyle // editable beautify (padding/bg/radius/shadow/ratio)
     let cgImage: CGImage          // rendered composite (base + annotations + crop + background)
+    let thumbnail: CGImage        // small downsampled composite for the Stack card
     let tempURL: URL
     let createdAt: Date
     let revision: Int
 
     init(id: UUID = UUID(), baseImage: CGImage, annotations: [Annotation] = [],
          cropRect: CGRect? = nil, background: BackgroundStyle = .none,
-         cgImage: CGImage, tempURL: URL, createdAt: Date = Date(), revision: Int = 0) {
+         cgImage: CGImage, thumbnail: CGImage, tempURL: URL,
+         createdAt: Date = Date(), revision: Int = 0) {
         self.id = id
         self.baseImage = baseImage
         self.annotations = annotations
         self.cropRect = cropRect
         self.background = background
         self.cgImage = cgImage
+        self.thumbnail = thumbnail
         self.tempURL = tempURL
         self.createdAt = createdAt
         self.revision = revision
@@ -44,6 +47,12 @@ struct Shot: Identifiable, Hashable {
     /// An `NSImage` sized to the pixel dimensions, for display and clipboard.
     var nsImage: NSImage {
         NSImage(cgImage: cgImage, size: pixelSize)
+    }
+
+    /// A small `NSImage` backed by the downsampled `thumbnail`, for the Stack card.
+    /// Sized to the composite's aspect ratio so SwiftUI lays it out like `nsImage`.
+    var nsThumbnail: NSImage {
+        NSImage(cgImage: thumbnail, size: pixelSize)
     }
 
     // Identity + revision so edits are detected by SwiftUI's view diffing.

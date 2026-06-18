@@ -33,6 +33,12 @@ enum ImageFormat {
     }
 }
 
+/// A save failed in a way the user should hear about (encode or disk write).
+enum ImageExportError: Error {
+    case encodeFailed
+    case writeFailed(underlying: Error)
+}
+
 enum ImageExport {
 
     /// Per-launch temp directory holding shots until saved, dragged out, or quit.
@@ -42,6 +48,42 @@ enum ImageExport {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }()
+
+    /// Downsample a composite into a small thumbnail for the Stack card. The long
+    /// side is capped at `maxLongSide` (≈ card width × max screen scale) so the card
+    /// uploads a tiny GPU texture instead of the full multi-MB composite. Falls back
+    /// to the original image if a context can't be made.
+    static func thumbnail(_ cgImage: CGImage, maxLongSide: CGFloat = 360) -> CGImage {
+        let w = CGFloat(cgImage.width), h = CGFloat(cgImage.height)
+        let longSide = max(w, h, 1)
+        guard longSide > maxLongSide else { return cgImage }   // already small enough
+        let scale = maxLongSide / longSide
+        let tw = max(Int((w * scale).rounded()), 1)
+        let th = max(Int((h * scale).rounded()), 1)
+
+        let colorSpace = cgImage.colorSpace ?? CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(
+            data: nil, width: tw, height: th, bitsPerComponent: 8, bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return cgImage }
+        ctx.interpolationQuality = .high
+        ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: tw, height: th))
+        return ctx.makeImage() ?? cgImage
+    }
+
+    /// Delete leftover temp PNGs from a previous session. Normally cleaned up on a
+    /// clean quit, but a crash/force-quit leaves them behind, so sweep at launch
+    /// before any capture can write new files. Deletes the *contents* of the temp
+    /// directory (not the directory itself) so the lazy `tempDirectory` accessor and
+    /// subsequent writes keep working.
+    static func sweepTempDirectory() {
+        let fm = FileManager.default
+        guard let entries = try? fm.contentsOfDirectory(
+            at: tempDirectory, includingPropertiesForKeys: nil) else { return }
+        for url in entries {
+            try? fm.removeItem(at: url)
+        }
+    }
 
     /// Encode a CGImage to PNG or JPEG data.
     static func encode(_ cgImage: CGImage, as format: ImageFormat) -> Data? {
@@ -54,10 +96,16 @@ enum ImageExport {
         }
     }
 
+    /// Deterministic temp URL for a shot id — lets callers build the Shot with its
+    /// final `tempURL` up front and write the bytes later (possibly off-main).
+    static func tempURL(for id: UUID) -> URL {
+        tempDirectory.appendingPathComponent("\(id.uuidString).png")
+    }
+
     /// Always write a PNG to temp (full fidelity); format choice applies on save/drag.
     @discardableResult
     static func writeTemp(_ cgImage: CGImage, id: UUID) throws -> URL {
-        let url = tempDirectory.appendingPathComponent("\(id.uuidString).png")
+        let url = tempURL(for: id)
         guard let data = encode(cgImage, as: .png) else {
             throw CocoaError(.fileWriteUnknown)
         }
@@ -65,22 +113,38 @@ enum ImageExport {
         return url
     }
 
-    /// Write a CGImage to a directory using the user-facing name + format.
+    /// Write a CGImage to a directory using the user-facing name + format. Creates
+    /// the directory if needed and uniques the filename on collision so a same-second
+    /// save never silently overwrites. Throws `ImageExportError` so callers can alert.
     @discardableResult
     static func write(_ cgImage: CGImage, to directory: URL,
-                      format: ImageFormat = Prefs.format, date: Date = Date()) -> URL? {
-        let url = directory.appendingPathComponent(fileName(for: date, format: format))
-        guard let data = encode(cgImage, as: format) else { return nil }
+                      format: ImageFormat = Prefs.format, date: Date = Date()) throws -> URL {
+        guard let data = encode(cgImage, as: format) else { throw ImageExportError.encodeFailed }
+        let fm = FileManager.default
         do {
+            try fm.createDirectory(at: directory, withIntermediateDirectories: true)
+            let url = uniqueURL(in: directory, base: baseName(for: date), ext: format.ext)
             try data.write(to: url)
             return url
         } catch {
             NSLog("Screenish: write failed: \(error)")
-            return nil
+            throw ImageExportError.writeFailed(underlying: error)
         }
     }
 
-    /// Base name without extension, e.g. "Screenish 2026-06-15 kl 14.32".
+    /// First non-colliding URL: "<base>.ext", then "<base> 2.ext", "<base> 3.ext", …
+    private static func uniqueURL(in directory: URL, base: String, ext: String) -> URL {
+        let fm = FileManager.default
+        var url = directory.appendingPathComponent("\(base).\(ext)")
+        var n = 2
+        while fm.fileExists(atPath: url.path) {
+            url = directory.appendingPathComponent("\(base) \(n).\(ext)")
+            n += 1
+        }
+        return url
+    }
+
+    /// Base name without extension, e.g. "Screenish 2026-06-15 kl 14.32.05".
     static func baseName(for date: Date) -> String {
         "Screenish " + nameFormatter.string(from: date)
     }
@@ -92,7 +156,8 @@ enum ImageExport {
     private static let nameFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "sv_SE")
-        f.dateFormat = "yyyy-MM-dd 'kl' HH.mm"
+        // Seconds included so distinct same-minute saves get distinct names.
+        f.dateFormat = "yyyy-MM-dd 'kl' HH.mm.ss"
         return f
     }()
 }

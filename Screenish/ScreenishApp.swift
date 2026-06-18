@@ -32,6 +32,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Log.installCrashHandlers()
         NSApp.setActivationPolicy(.accessory)   // tray only, no dock icon
         Prefs.registerDefaults()
+        // Sweep temp PNGs orphaned by a previous crash/force-quit before any capture
+        // can write new files (mirrors CrashReporter's launch-time sweep).
+        ImageExport.sweepTempDirectory()
+        ShotDrag.sweepDragDirectory()   // also purge stale drag copies
         AppCoordinator.shared.start()
 
         if CrashReporter.lastSessionCrashed {
