@@ -144,17 +144,7 @@ struct InspectorPanel: View {
     // MARK: - Inset
 
     private var insetSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            slider("Inset", value: insetBinding, range: 0...0.06)
-            HStack {
-                Toggle("Balance", isOn: balanceBinding)
-                    .toggleStyle(.checkbox)
-                Spacer()
-                if !document.background.balanceInset {
-                    ColorPicker("", selection: insetColorBinding).labelsHidden()
-                }
-            }
-        }
+        slider("Inset", value: insetBinding, range: 0...0.06)
     }
 
     // MARK: - Background fill
@@ -286,14 +276,6 @@ struct InspectorPanel: View {
     private var insetBinding: Binding<Double> {
         Binding(get: { Double(document.background.insetFraction) },
                 set: { document.background.insetFraction = CGFloat($0) })
-    }
-    private var insetColorBinding: Binding<Color> {
-        Binding(get: { Color(nsColor: document.background.insetColor) },
-                set: { document.beginInteraction(); document.background.insetColor = NSColor($0) })
-    }
-    private var balanceBinding: Binding<Bool> {
-        Binding(get: { document.background.balanceInset },
-                set: { document.beginInteraction(); document.background.balanceInset = $0 })
     }
     private var cornerBinding: Binding<Double> {
         Binding(get: { Double(document.background.cornerRadiusFraction) },

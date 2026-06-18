@@ -90,38 +90,13 @@ enum BackgroundRenderer {
                            cornerHeight: radius, transform: nil))
         ctx.clip()
         if l.insetPx > 0 {
-            ctx.setFillColor(resolvedInsetColor(style: style, sampleImage: inner).cgColor)
+            ctx.setFillColor(style.insetColor.cgColor)
             ctx.fill(cardRect)
         }
         ctx.draw(inner, in: innerRect)
         ctx.restoreGState()
 
         return ctx.makeImage() ?? inner
-    }
-
-    /// Inset frame color: when Balance is on, sample the image's average color so the
-    /// frame blends with the screenshot; otherwise the user's chosen inset color.
-    static func resolvedInsetColor(style: BackgroundStyle, sampleImage: CGImage,
-                                   cachedAverage: NSColor? = nil) -> NSColor {
-        guard style.balanceInset else { return style.insetColor }
-        return cachedAverage ?? averageColor(of: sampleImage)
-    }
-
-    /// Average color of an image via CIAreaAverage (renders to a single pixel).
-    static func averageColor(of image: CGImage) -> NSColor {
-        let ci = CIImage(cgImage: image)
-        let extentVector = CIVector(x: ci.extent.minX, y: ci.extent.minY,
-                                    z: ci.extent.width, w: ci.extent.height)
-        guard let filter = CIFilter(name: "CIAreaAverage",
-                                    parameters: [kCIInputImageKey: ci,
-                                                 kCIInputExtentKey: extentVector]),
-              let output = filter.outputImage else { return .gray }
-        var bitmap = [UInt8](repeating: 0, count: 4)
-        AnnotationDrawer.ciContext.render(output, toBitmap: &bitmap,
-                         rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
-                         format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
-        return NSColor(srgbRed: CGFloat(bitmap[0]) / 255, green: CGFloat(bitmap[1]) / 255,
-                       blue: CGFloat(bitmap[2]) / 255, alpha: 1)
     }
 
     /// Draw the background fill into `rect` of `ctx` (shared by export + canvas).

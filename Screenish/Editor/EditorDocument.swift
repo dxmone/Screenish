@@ -14,10 +14,6 @@ final class EditorDocument: ObservableObject {
     let shot: Shot
     let baseImage: CGImage
 
-    /// Average color of the base image, cached for the Balance-inset feature so it
-    /// isn't recomputed on every canvas redraw.
-    lazy var baseAverageColor: NSColor = BackgroundRenderer.averageColor(of: baseImage)
-
     @Published var annotations: [Annotation] = []
     @Published var selectionID: Annotation.ID?
     @Published var tool: EditorTool = .arrow

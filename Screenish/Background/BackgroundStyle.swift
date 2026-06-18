@@ -101,7 +101,6 @@ struct BackgroundStyle: Equatable, Codable {
     var paddingFraction: CGFloat = 0        // 0…0.4 of the inner image's longest side
     var insetFraction: CGFloat = 0          // 0…0.1 colored frame between image and padding
     var insetColor: NSColor = .white
-    var balanceInset: Bool = false          // inset color auto-sampled from the image
     var cornerRadiusFraction: CGFloat = 0   // 0…0.25 of the card's shortest side
     var shadowRadiusFraction: CGFloat = 0.04
     var shadowOpacity: CGFloat = 0
@@ -119,7 +118,7 @@ struct BackgroundStyle: Equatable, Codable {
     // MARK: - Codable (insetColor stored as a hex string)
 
     private enum CodingKeys: String, CodingKey {
-        case paddingFraction, insetFraction, insetColorHex, balanceInset, cornerRadiusFraction
+        case paddingFraction, insetFraction, insetColorHex, cornerRadiusFraction
         case shadowRadiusFraction, shadowOpacity, fill, ratio
     }
 
@@ -130,7 +129,6 @@ struct BackgroundStyle: Equatable, Codable {
         paddingFraction = try c.decode(CGFloat.self, forKey: .paddingFraction)
         insetFraction = try c.decode(CGFloat.self, forKey: .insetFraction)
         insetColor = NSColor(hexRGBA: try c.decode(String.self, forKey: .insetColorHex)) ?? .white
-        balanceInset = try c.decodeIfPresent(Bool.self, forKey: .balanceInset) ?? false
         cornerRadiusFraction = try c.decode(CGFloat.self, forKey: .cornerRadiusFraction)
         shadowRadiusFraction = try c.decode(CGFloat.self, forKey: .shadowRadiusFraction)
         shadowOpacity = try c.decode(CGFloat.self, forKey: .shadowOpacity)
@@ -143,7 +141,6 @@ struct BackgroundStyle: Equatable, Codable {
         try c.encode(paddingFraction, forKey: .paddingFraction)
         try c.encode(insetFraction, forKey: .insetFraction)
         try c.encode(insetColor.hexRGBA, forKey: .insetColorHex)
-        try c.encode(balanceInset, forKey: .balanceInset)
         try c.encode(cornerRadiusFraction, forKey: .cornerRadiusFraction)
         try c.encode(shadowRadiusFraction, forKey: .shadowRadiusFraction)
         try c.encode(shadowOpacity, forKey: .shadowOpacity)
