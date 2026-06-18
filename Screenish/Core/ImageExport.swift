@@ -65,6 +65,20 @@ enum ImageExport {
         return ctx.makeImage() ?? cgImage
     }
 
+    /// Delete leftover temp PNGs from a previous session. Normally cleaned up on a
+    /// clean quit, but a crash/force-quit leaves them behind, so sweep at launch
+    /// before any capture can write new files. Deletes the *contents* of the temp
+    /// directory (not the directory itself) so the lazy `tempDirectory` accessor and
+    /// subsequent writes keep working.
+    static func sweepTempDirectory() {
+        let fm = FileManager.default
+        guard let entries = try? fm.contentsOfDirectory(
+            at: tempDirectory, includingPropertiesForKeys: nil) else { return }
+        for url in entries {
+            try? fm.removeItem(at: url)
+        }
+    }
+
     /// Encode a CGImage to PNG or JPEG data.
     static func encode(_ cgImage: CGImage, as format: ImageFormat) -> Data? {
         let rep = NSBitmapImageRep(cgImage: cgImage)
