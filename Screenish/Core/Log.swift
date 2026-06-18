@@ -127,7 +127,8 @@ enum CrashReporter {
 
     static func install() {
         try? FileManager.default.createDirectory(
-            at: logDirectory, withIntermediateDirectories: true)
+            at: logDirectory, withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700])
 
         // Inspect the *previous* session before we truncate it for this run.
         promotePreviousSessionIfCrashed()
@@ -139,7 +140,7 @@ enum CrashReporter {
 
         // Open (truncate) the session file and keep the fd for the handlers.
         gCrashFD = open(sessionURL.path,
-                        O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0o644)
+                        O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0o600)
         writeHeader()
 
         installSignalHandlers()
@@ -197,6 +198,9 @@ enum CrashReporter {
         let stamp = Int(Date().timeIntervalSince1970)
         let crashURL = logDirectory.appendingPathComponent("crash-\(stamp).log")
         try? previous.write(to: crashURL, atomically: true, encoding: .utf8)
+        // Atomic write lands under the default umask; tighten to owner-only.
+        try? FileManager.default.setAttributes(
+            [.posixPermissions: 0o600], ofItemAtPath: crashURL.path)
         Log.general.fault("previous session crashed; saved \(crashURL.lastPathComponent, privacy: .public)")
     }
 
@@ -294,7 +298,8 @@ enum CrashReporter {
     /// Reveal the crash-log folder in Finder (wired to the tray menu).
     static func revealInFinder() {
         try? FileManager.default.createDirectory(
-            at: logDirectory, withIntermediateDirectories: true)
+            at: logDirectory, withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700])
         NSWorkspace.shared.activateFileViewerSelecting([logDirectory])
     }
 }
