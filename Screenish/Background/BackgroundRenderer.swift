@@ -63,6 +63,15 @@ enum BackgroundRenderer {
 
         let innerSize = CGSize(width: inner.width, height: inner.height)
         let l = layout(innerSize: innerSize, style: style)
+        // Defense-in-depth: a non-finite or absurd outer size would trap the
+        // Int(...) cast below or request an enormous bitmap. Bail to the
+        // unwrapped image rather than crash. (32k px is well past any real shot.)
+        let maxDim: CGFloat = 32_768
+        guard l.outerSize.width.isFinite, l.outerSize.height.isFinite,
+              l.outerSize.width >= 1, l.outerSize.height >= 1,
+              l.outerSize.width <= maxDim, l.outerSize.height <= maxDim else {
+            return inner
+        }
         let outerW = Int(l.outerSize.width), outerH = Int(l.outerSize.height)
         let space = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
         guard let ctx = CGContext(
