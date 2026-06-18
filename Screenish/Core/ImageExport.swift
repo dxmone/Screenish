@@ -85,8 +85,10 @@ enum ImageExport {
         }
     }
 
-    /// Encode a CGImage to PNG or JPEG data.
-    static func encode(_ cgImage: CGImage, as format: ImageFormat) -> Data? {
+    /// Encode a CGImage to PNG or JPEG data. `nonisolated` so the temp-PNG encode
+    /// can run off the main actor (see `ShotStore.writeTempOffMain`); it touches no
+    /// main-actor state — just the immutable `cgImage`.
+    nonisolated static func encode(_ cgImage: CGImage, as format: ImageFormat) -> Data? {
         let rep = NSBitmapImageRep(cgImage: cgImage)
         switch format {
         case .png:
