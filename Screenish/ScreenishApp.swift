@@ -35,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Sweep temp PNGs orphaned by a previous crash/force-quit before any capture
         // can write new files (mirrors CrashReporter's launch-time sweep).
         ImageExport.sweepTempDirectory()
+        ShotDrag.sweepDragDirectory()   // also purge stale drag copies
         AppCoordinator.shared.start()
 
         if CrashReporter.lastSessionCrashed {

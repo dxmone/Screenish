@@ -47,6 +47,9 @@ final class DragSourceNSView: NSView, NSDraggingSource {
     var onCancelled: (() -> Void)?
 
     private var mouseDownPoint: NSPoint = .zero
+    /// File written for the current drag session; deleted when the session ends so
+    /// its lifetime is tied to the drag (it's a transient copy of the screenshot).
+    private var dragFileURL: URL?
 
     private let label = NSTextField(labelWithString: "")
     private let icon = NSImageView()
@@ -111,11 +114,12 @@ final class DragSourceNSView: NSView, NSDraggingSource {
         let url = ShotDrag.dragDirectory
             .appendingPathComponent(ImageExport.fileName(for: date?() ?? Date(), format: format))
         do {
-            try data.write(to: url)
+            try ShotDrag.writeDragFile(data, to: url)
         } catch {
             Log.drag.error("drag aborted: write failed \(error.localizedDescription, privacy: .public)")
             return
         }
+        dragFileURL = url
 
         let item = NSDraggingItem(pasteboardWriter: url as NSURL)
         let thumb = thumbnail(from: image)
@@ -148,6 +152,12 @@ final class DragSourceNSView: NSView, NSDraggingSource {
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint,
                          operation: NSDragOperation) {
+        // The drop target reads the file synchronously during the drag, so it's safe
+        // to delete here regardless of outcome — ties the copy to the drag session.
+        if let url = dragFileURL {
+            try? FileManager.default.removeItem(at: url)
+            dragFileURL = nil
+        }
         if operation.isEmpty {
             Log.breadcrumb("drag cancelled")
             onCancelled?()
