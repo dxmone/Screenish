@@ -76,10 +76,16 @@ enum ImageExport {
         }
     }
 
+    /// Deterministic temp URL for a shot id — lets callers build the Shot with its
+    /// final `tempURL` up front and write the bytes later (possibly off-main).
+    static func tempURL(for id: UUID) -> URL {
+        tempDirectory.appendingPathComponent("\(id.uuidString).png")
+    }
+
     /// Always write a PNG to temp (full fidelity); format choice applies on save/drag.
     @discardableResult
     static func writeTemp(_ cgImage: CGImage, id: UUID) throws -> URL {
-        let url = tempDirectory.appendingPathComponent("\(id.uuidString).png")
+        let url = tempURL(for: id)
         guard let data = encode(cgImage, as: .png) else {
             throw CocoaError(.fileWriteUnknown)
         }
