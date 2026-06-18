@@ -43,6 +43,28 @@ enum ImageExport {
         return dir
     }()
 
+    /// Downsample a composite into a small thumbnail for the Stack card. The long
+    /// side is capped at `maxLongSide` (≈ card width × max screen scale) so the card
+    /// uploads a tiny GPU texture instead of the full multi-MB composite. Falls back
+    /// to the original image if a context can't be made.
+    static func thumbnail(_ cgImage: CGImage, maxLongSide: CGFloat = 360) -> CGImage {
+        let w = CGFloat(cgImage.width), h = CGFloat(cgImage.height)
+        let longSide = max(w, h, 1)
+        guard longSide > maxLongSide else { return cgImage }   // already small enough
+        let scale = maxLongSide / longSide
+        let tw = max(Int((w * scale).rounded()), 1)
+        let th = max(Int((h * scale).rounded()), 1)
+
+        let colorSpace = cgImage.colorSpace ?? CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(
+            data: nil, width: tw, height: th, bitsPerComponent: 8, bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return cgImage }
+        ctx.interpolationQuality = .high
+        ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: tw, height: th))
+        return ctx.makeImage() ?? cgImage
+    }
+
     /// Encode a CGImage to PNG or JPEG data.
     static func encode(_ cgImage: CGImage, as format: ImageFormat) -> Data? {
         let rep = NSBitmapImageRep(cgImage: cgImage)

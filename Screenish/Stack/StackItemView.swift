@@ -64,7 +64,10 @@ struct StackItemView: View {
     }
 
     var body: some View {
-        Image(nsImage: shot.nsImage)
+        // Draw the downsampled thumbnail — the full composite would upload a
+        // multi-MB GPU texture just to fill a ~160pt card. Drag/copy/editor still
+        // use the full-resolution cgImage below.
+        Image(nsImage: shot.nsThumbnail)
             .resizable()
             .aspectRatio(contentMode: .fit)
             .frame(width: thumbSize.width, height: thumbSize.height)

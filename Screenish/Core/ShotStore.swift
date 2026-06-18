@@ -23,10 +23,11 @@ final class ShotStore: ObservableObject {
         let rendered = background.isEmpty ? capturedImage
             : (EditorRenderer.renderComposite(base: capturedImage, annotations: [],
                                               cropRect: nil, background: background) ?? capturedImage)
+        let thumbnail = ImageExport.thumbnail(rendered)
         do {
             let url = try ImageExport.writeTemp(rendered, id: id)
             let shot = Shot(id: id, baseImage: capturedImage, background: background,
-                            cgImage: rendered, tempURL: url)
+                            cgImage: rendered, thumbnail: thumbnail, tempURL: url)
             shots.insert(shot, at: 0)
             return shot
         } catch {
@@ -47,11 +48,12 @@ final class ShotStore: ObservableObject {
         let rendered = EditorRenderer.renderComposite(base: base, annotations: annotations,
                                                       cropRect: cropRect,
                                                       background: background) ?? base
+        let thumbnail = ImageExport.thumbnail(rendered)
         do {
             let url = try ImageExport.writeTemp(rendered, id: shot.id)
             shots[idx] = Shot(id: shot.id, baseImage: base, annotations: annotations,
                               cropRect: cropRect, background: background, cgImage: rendered,
-                              tempURL: url, createdAt: shot.createdAt,
+                              thumbnail: thumbnail, tempURL: url, createdAt: shot.createdAt,
                               revision: shot.revision + 1)
             return rendered
         } catch {
