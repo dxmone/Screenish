@@ -25,6 +25,11 @@ struct BackgroundLayout {
 }
 
 enum BackgroundRenderer {
+    /// Built `CGGradient`s keyed by `GradientPreset.id`. Presets are immutable
+    /// (stable id, fixed colors/angle) so a built gradient never goes stale.
+    /// Main-thread only (all rendering is), so no locking is needed.
+    private static var gradientCache: [String: CGGradient] = [:]
+
     static func layout(innerSize: CGSize, style: BackgroundStyle) -> BackgroundLayout {
         let innerW = innerSize.width, innerH = innerSize.height
         let longest = max(innerW, innerH)
@@ -109,11 +114,7 @@ enum BackgroundRenderer {
             ctx.setFillColor(color.cgColor)
             ctx.fill(rect)
         case .gradient(let preset):
-            let cgColors = preset.colors.map { $0.usingColorSpace(.sRGB)?.cgColor ?? $0.cgColor }
-            guard let gradient = CGGradient(colorsSpace: space,
-                                            colors: cgColors as CFArray, locations: nil) else {
-                return
-            }
+            guard let gradient = gradient(for: preset, space: space) else { return }
             let a = preset.angle * .pi / 180
             let dx = cos(a), dy = sin(a)
             let cx = rect.midX, cy = rect.midY
@@ -127,5 +128,19 @@ enum BackgroundRenderer {
                                    options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
             ctx.restoreGState()
         }
+    }
+
+    /// Cached `CGGradient` for a preset, built once and reused across redraws
+    /// (applyFill runs on every canvas redraw). Re-converts colors to sRGB only
+    /// on the first miss.
+    private static func gradient(for preset: GradientPreset, space: CGColorSpace) -> CGGradient? {
+        if let cached = gradientCache[preset.id] { return cached }
+        let cgColors = preset.colors.map { $0.usingColorSpace(.sRGB)?.cgColor ?? $0.cgColor }
+        guard let gradient = CGGradient(colorsSpace: space,
+                                        colors: cgColors as CFArray, locations: nil) else {
+            return nil
+        }
+        gradientCache[preset.id] = gradient
+        return gradient
     }
 }
