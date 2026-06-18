@@ -72,8 +72,28 @@ final class CaptureController {
                               width: (globalRect.width * sx).rounded(),
                               height: (globalRect.height * sy).rounded())
             .intersection(CGRect(x: 0, y: 0, width: full.width, height: full.height))
-        guard !cropRect.isNull, cropRect.width >= 1, cropRect.height >= 1 else { return nil }
-        return full.cropping(to: cropRect)
+        guard !cropRect.isNull, cropRect.width >= 1, cropRect.height >= 1,
+              let cropped = full.cropping(to: cropRect) else { return nil }
+        // CGImage.cropping(to:) keeps a reference to the parent's full-display
+        // backing store (100+ MB), so detach into a fresh standalone bitmap and
+        // drop `full` to release it for the rest of the editing session.
+        return detachedCopy(of: cropped) ?? cropped
+    }
+
+    /// Copy a CGImage into a freshly allocated bitmap so it no longer references
+    /// any parent backing store. Pixel-identical to the input.
+    private func detachedCopy(of image: CGImage) -> CGImage? {
+        let width = image.width
+        let height = image.height
+        let colorSpace = image.colorSpace ?? CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
+            | CGBitmapInfo.byteOrder32Big.rawValue
+        guard let context = CGContext(
+            data: nil, width: width, height: height,
+            bitsPerComponent: 8, bytesPerRow: 0,
+            space: colorSpace, bitmapInfo: bitmapInfo) else { return nil }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        return context.makeImage()
     }
 
     // MARK: - Window
