@@ -109,8 +109,7 @@ final class DragSourceNSView: NSView, NSDraggingSource {
             Log.drag.error("drag aborted: encode failed")
             return
         }
-        let url = ShotDrag.dragDirectory
-            .appendingPathComponent(ImageExport.fileName(for: date?() ?? Date(), format: format))
+        let url = ShotDrag.uniqueDragURL(for: date?() ?? Date(), format: format)
         do {
             try ShotDrag.writeDragFile(data, to: url)
         } catch {

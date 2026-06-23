@@ -135,7 +135,7 @@ enum ImageExport {
     }
 
     /// First non-colliding URL: "<base>.ext", then "<base> 2.ext", "<base> 3.ext", …
-    private static func uniqueURL(in directory: URL, base: String, ext: String) -> URL {
+    static func uniqueURL(in directory: URL, base: String, ext: String) -> URL {
         let fm = FileManager.default
         var url = directory.appendingPathComponent("\(base).\(ext)")
         var n = 2

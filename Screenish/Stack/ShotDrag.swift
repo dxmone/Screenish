@@ -39,6 +39,14 @@ enum ShotDrag {
         }
     }
 
+    /// Unique URL in the drag scratch for a shot's name, bumping on collision so a
+    /// second drag in the same second never clobbers a path an earlier drag handed out
+    /// (the files now outlive their drag, so a same-name write would corrupt a live path).
+    static func uniqueDragURL(for date: Date, format: ImageFormat) -> URL {
+        ImageExport.uniqueURL(in: dragDirectory,
+                              base: ImageExport.baseName(for: date), ext: format.ext)
+    }
+
     /// Write the drag file owner-only (0600) — it is a transient copy of the user's
     /// screenshot living in the app cache directory.
     static func writeDragFile(_ data: Data, to url: URL) throws {
