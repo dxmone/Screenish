@@ -11,19 +11,25 @@ import AppKit
 import UniformTypeIdentifiers
 
 enum ShotDrag {
+    /// Drag scratch lives in Caches, not the volatile /var/folders temp reaper, so a
+    /// dragged file's path keeps resolving for the whole session — path-referencing
+    /// targets like Terminal read the file after the drag ends. Swept at next launch.
     static let dragDirectory: URL = {
-        let dir = ImageExport.tempDirectory.appendingPathComponent("drag", isDirectory: true)
-        // Owner-only (0700): the drag scratch holds user screenshots in a shared
-        // temp location, so keep other users off it.
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? ImageExport.tempDirectory
+        let dir = caches
+            .appendingPathComponent(Bundle.main.bundleIdentifier ?? "Screenish", isDirectory: true)
+            .appendingPathComponent("drag", isDirectory: true)
+        // Owner-only (0700): the drag scratch holds user screenshots, so keep others off it.
         try? FileManager.default.createDirectory(
             at: dir, withIntermediateDirectories: true,
             attributes: [.posixPermissions: 0o700])
         return dir
     }()
 
-    /// Purge drag copies orphaned by a previous crash. Each session's copy is
-    /// deleted when its drag ends, but a crash mid-drag leaves it behind, so sweep
-    /// the directory contents at launch. Keeps the directory for subsequent writes.
+    /// Purge drag copies left by previous sessions. Drag copies outlive their drag
+    /// (so path-referencing targets like Terminal can read them afterwards), so they
+    /// accumulate until swept here at launch. Keeps the directory for subsequent writes.
     static func sweepDragDirectory() {
         let fm = FileManager.default
         guard let entries = try? fm.contentsOfDirectory(
@@ -34,7 +40,7 @@ enum ShotDrag {
     }
 
     /// Write the drag file owner-only (0600) — it is a transient copy of the user's
-    /// screenshot living in a shared temp directory.
+    /// screenshot living in the app cache directory.
     static func writeDragFile(_ data: Data, to url: URL) throws {
         try data.write(to: url)
         try? fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
