@@ -61,9 +61,6 @@ final class StackDragNSView: NSView, NSDraggingSource {
     private var mouseDownPoint: NSPoint = .zero
     private var didDrag = false
     private var trackingArea: NSTrackingArea?
-    /// File written for the current drag session; deleted when the session ends so
-    /// its lifetime is tied to the drag (it's a transient copy of the screenshot).
-    private var dragFileURL: URL?
 
     override var acceptsFirstResponder: Bool { true }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -121,7 +118,6 @@ final class StackDragNSView: NSView, NSDraggingSource {
             Log.drag.error("stack drag aborted: write failed \(error.localizedDescription, privacy: .public)")
             return
         }
-        dragFileURL = url
 
         let item = NSDraggingItem(pasteboardWriter: url as NSURL)
         let thumb = thumbnail(from: cgImage)
@@ -168,12 +164,9 @@ final class StackDragNSView: NSView, NSDraggingSource {
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint,
                          operation: NSDragOperation) {
-        // The drop target reads the file synchronously during the drag, so it's safe
-        // to delete here regardless of outcome — ties the copy to the drag session.
-        if let url = dragFileURL {
-            try? FileManager.default.removeItem(at: url)
-            dragFileURL = nil
-        }
+        // Don't delete the dragged file here. Path-referencing targets (Terminal, shell
+        // prompts) only capture the file's path during the drag and read it later, so the
+        // file must outlive the drag. It's swept at next launch (sweepDragDirectory).
         if operation.isEmpty {
             Log.drag.log("stack drag cancelled")
         } else {

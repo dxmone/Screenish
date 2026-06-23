@@ -3,9 +3,10 @@
 //  Screenish
 //
 //  AppKit drag source for the editor's "Drag" handle. Renders the current image
-//  once at drag start, drags it out as a file promise with a small thumbnail
-//  that follows the cursor, and reports begin/deliver/cancel so the editor can
-//  animate away and close (or restore). All callbacks fire on the main thread.
+//  once at drag start, writes it to the drag scratch dir and drags out a real file
+//  URL with a small thumbnail that follows the cursor, and reports begin/deliver/
+//  cancel so the editor can animate away and close (or restore). All callbacks fire
+//  on the main thread.
 //
 
 import AppKit
@@ -47,9 +48,6 @@ final class DragSourceNSView: NSView, NSDraggingSource {
     var onCancelled: (() -> Void)?
 
     private var mouseDownPoint: NSPoint = .zero
-    /// File written for the current drag session; deleted when the session ends so
-    /// its lifetime is tied to the drag (it's a transient copy of the screenshot).
-    private var dragFileURL: URL?
 
     private let label = NSTextField(labelWithString: "")
     private let icon = NSImageView()
@@ -119,7 +117,6 @@ final class DragSourceNSView: NSView, NSDraggingSource {
             Log.drag.error("drag aborted: write failed \(error.localizedDescription, privacy: .public)")
             return
         }
-        dragFileURL = url
 
         let item = NSDraggingItem(pasteboardWriter: url as NSURL)
         let thumb = thumbnail(from: image)
@@ -152,12 +149,9 @@ final class DragSourceNSView: NSView, NSDraggingSource {
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint,
                          operation: NSDragOperation) {
-        // The drop target reads the file synchronously during the drag, so it's safe
-        // to delete here regardless of outcome — ties the copy to the drag session.
-        if let url = dragFileURL {
-            try? FileManager.default.removeItem(at: url)
-            dragFileURL = nil
-        }
+        // Don't delete the dragged file here. Path-referencing targets (Terminal, shell
+        // prompts) only capture the file's path during the drag and read it later, so the
+        // file must outlive the drag. It's swept at next launch (sweepDragDirectory).
         if operation.isEmpty {
             Log.breadcrumb("drag cancelled")
             onCancelled?()
