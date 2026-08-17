@@ -4,7 +4,8 @@
 //
 //  The AppKit drawing surface. Flipped (top-left origin). Displays the base
 //  image scaled to fit, draws annotations via the shared AnnotationDrawer,
-//  handles selection/creation/move/resize, inline text editing, and crop.
+//  handles selection/creation/move/resize, inline text editing, crop, and a
+//  view-only scroll/pinch zoom for annotating small details.
 //
 
 import AppKit
@@ -56,16 +57,68 @@ final class CanvasNSView: NSView {
     private var outerSize: CGSize { bgLayout.outerSize }
     private var innerOrigin: CGPoint { bgLayout.innerOrigin }
 
-    private var scale: CGFloat {
+    private var fitScale: CGFloat {
         // Fill the canvas with the composite so the background fills the area and
         // the image stays as large as the padding allows (no extra neutral margin).
         let s = min(bounds.width / outerSize.width, bounds.height / outerSize.height)
         return s.isFinite && s > 0 ? s : 1
     }
 
+    // View-only zoom: scroll/pinch magnifies the canvas so small details can be
+    // annotated precisely. Document geometry stays in image pixels and the export
+    // is untouched — the full screenshot is always what leaves the editor.
+    private var viewZoom: CGFloat = 1
+    private var viewPan: CGPoint = .zero    // desired offset minus centered offset
+
+    private var scale: CGFloat { fitScale * viewZoom }
+
     private var offset: CGPoint {
-        CGPoint(x: (bounds.width - outerSize.width * scale) / 2,
-                y: (bounds.height - outerSize.height * scale) / 2)
+        // Clamp so the composite never detaches from the view: pan only within the
+        // overflow when zoomed in; keep centered along any axis that still fits.
+        let w = outerSize.width * scale, h = outerSize.height * scale
+        var x = (bounds.width - w) / 2 + viewPan.x
+        var y = (bounds.height - h) / 2 + viewPan.y
+        if w <= bounds.width { x = (bounds.width - w) / 2 }
+        else { x = min(0, max(bounds.width - w, x)) }
+        if h <= bounds.height { y = (bounds.height - h) / 2 }
+        else { y = min(0, max(bounds.height - h, y)) }
+        return CGPoint(x: x, y: y)
+    }
+
+    // MARK: - Zoom gestures
+
+    override func scrollWheel(with event: NSEvent) {
+        let delta = event.hasPreciseScrollingDeltas ? event.scrollingDeltaY / 100
+                                                    : event.scrollingDeltaY / 10
+        guard delta != 0 else { return }
+        setZoom(viewZoom * exp(delta), anchor: convert(event.locationInWindow, from: nil))
+    }
+
+    override func magnify(with event: NSEvent) {
+        setZoom(viewZoom * (1 + event.magnification),
+                anchor: convert(event.locationInWindow, from: nil))
+    }
+
+    private func setZoom(_ newZoom: CGFloat, anchor: CGPoint) {
+        let clamped = max(1, min(8, newZoom))
+        guard clamped != viewZoom else { return }
+        commitTextEditing()   // the overlay text view doesn't follow the zoom
+        let oldScale = scale
+        let oldOffset = offset
+        viewZoom = clamped
+        if clamped == 1 {
+            viewPan = .zero
+        } else {
+            // Keep the composite point under the cursor stationary:
+            // offset' = anchor - (scale'/scale) * (anchor - offset)
+            let ratio = scale / oldScale
+            viewPan = CGPoint(
+                x: anchor.x - ratio * (anchor.x - oldOffset.x)
+                    - (bounds.width - outerSize.width * scale) / 2,
+                y: anchor.y - ratio * (anchor.y - oldOffset.y)
+                    - (bounds.height - outerSize.height * scale) / 2)
+        }
+        needsDisplay = true
     }
 
     private func imagePoint(_ event: NSEvent) -> CGPoint {
@@ -102,6 +155,9 @@ final class CanvasNSView: NSView {
         var background: Screenish.BackgroundStyle
         var cropRect: CGRect?
         var baseImage: ObjectIdentifier
+        // View zoom/pan are baked into the cached bitmap's transform.
+        var zoom: CGFloat
+        var pan: CGPoint
     }
     private var staticLayerKey: StaticLayerKey?
 
@@ -116,7 +172,8 @@ final class CanvasNSView: NSView {
         let pixelH = max(1, Int(backing.height.rounded()))
         let key = StaticLayerKey(pixelWidth: pixelW, pixelHeight: pixelH,
                                  background: document.background, cropRect: document.cropRect,
-                                 baseImage: ObjectIdentifier(document.baseImage))
+                                 baseImage: ObjectIdentifier(document.baseImage),
+                                 zoom: viewZoom, pan: viewPan)
         if staticLayerKey != key || staticLayerCache == nil {
             staticLayerCache = renderStaticLayers(pixelWidth: pixelW, pixelHeight: pixelH)
             staticLayerKey = key
