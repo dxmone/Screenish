@@ -3,7 +3,7 @@
 //  Screenish
 //
 //  Tray-accessible settings: save location, launch behavior, JPG compression,
-//  and the global capture shortcuts.
+//  the global capture shortcuts, and an About tab.
 //
 
 import SwiftUI
@@ -17,6 +17,8 @@ struct SettingsView: View {
                 .tabItem { Label("General", systemImage: "gearshape") }
             ShortcutsSettingsView()
                 .tabItem { Label("Shortcuts", systemImage: "command") }
+            AboutSettingsView()
+                .tabItem { Label("About", systemImage: "info.circle") }
         }
         .frame(width: 460)
         // Accessory apps don't auto-activate, so the Settings window can open
@@ -145,6 +147,41 @@ private struct ShortcutsSettingsView: View {
         }
         .formStyle(.grouped)
         .padding()
+    }
+}
+
+private struct AboutSettingsView: View {
+    private static let repoURL = URL(string: "https://github.com/dxmone/Screenish")!
+
+    private var version: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
+        if let build = info?["CFBundleVersion"] as? String, build != short {
+            return "\(short) (\(build))"
+        }
+        return short
+    }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 96, height: 96)
+            Text(verbatim: "Screenish")
+                .font(.title2.bold())
+            Text("Version \(version)")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            Text("Created by Thomas Strömberg with AI coding.")
+                .font(.callout)
+                .multilineTextAlignment(.center)
+                .padding(.top, 8)
+            Link("github.com/dxmone/Screenish", destination: Self.repoURL)
+                .font(.callout)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .padding(.horizontal)
     }
 }
 

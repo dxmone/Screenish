@@ -10,6 +10,16 @@
     "%lld%%" : {
 
     },
+    "About" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Om"
+          }
+        }
+      }
+    },
     "Add a numbered step marker" : {
       "localizations" : {
         "sv" : {
@@ -277,6 +287,16 @@
         }
       }
     },
+    "Created by Thomas Strömberg with AI coding." : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skapad av Thomas Strömberg med AI-kodning."
+          }
+        }
+      }
+    },
     "Crop" : {
       "localizations" : {
         "sv" : {
@@ -466,6 +486,9 @@
           }
         }
       }
+    },
+    "github.com/dxmone/Screenish" : {
+      "shouldTranslate" : false
     },
     "Highlight" : {
       "localizations" : {
@@ -1036,6 +1059,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ångra"
+          }
+        }
+      }
+    },
+    "Version %@" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version %@"
           }
         }
       }
