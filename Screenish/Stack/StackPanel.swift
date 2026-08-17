@@ -2,7 +2,7 @@
 //  StackPanel.swift
 //  Screenish
 //
-//  A non-activating floating panel pinned to the bottom-left of the main
+//  A non-activating floating panel pinned to the bottom-left of the primary
 //  screen, hosting the Stack of shots. Shown while shots exist, hidden when empty.
 //
 
@@ -66,7 +66,9 @@ final class StackPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 
     func refreshLayout() {
-        guard let screen = NSScreen.main else { return }
+        // Always the primary screen (menu-bar screen). NSScreen.main is the screen
+        // with the key window, so the stack would follow whatever app has focus.
+        guard let screen = NSScreen.screens.first else { return }
         let visible = screen.visibleFrame
         let maxHeight = visible.height - margin * 2
 
