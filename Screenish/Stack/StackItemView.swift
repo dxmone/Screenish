@@ -85,6 +85,10 @@ struct StackItemView: View {
                     onHoverChange: { hovering = $0 },
                     onSaveToFolder: { saveToFolder() },
                     onCopy: { Pasteboard.copy(shot.cgImage) },
+                    onCopyAndRemove: {
+                        Pasteboard.copy(shot.cgImage)
+                        AppCoordinator.shared.discardShot(shot)
+                    },
                     onRemove: { AppCoordinator.shared.discardShot(shot) },
                     onDelivered: { if Prefs.removeAfterDrag { AppCoordinator.shared.discardShot(shot) } }
                 )

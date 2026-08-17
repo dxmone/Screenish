@@ -22,6 +22,7 @@ struct StackDragSourceView: NSViewRepresentable {
     var onHoverChange: (Bool) -> Void
     var onSaveToFolder: () -> Void
     var onCopy: () -> Void
+    var onCopyAndRemove: () -> Void
     var onRemove: () -> Void
     /// Fires on the main actor once the drop target accepted the file.
     var onDelivered: () -> Void
@@ -43,6 +44,7 @@ struct StackDragSourceView: NSViewRepresentable {
         view.onHoverChange = onHoverChange
         view.onSaveToFolder = onSaveToFolder
         view.onCopy = onCopy
+        view.onCopyAndRemove = onCopyAndRemove
         view.onRemove = onRemove
         view.onDelivered = onDelivered
     }
@@ -55,6 +57,7 @@ final class StackDragNSView: NSView, NSDraggingSource {
     var onHoverChange: ((Bool) -> Void)?
     var onSaveToFolder: (() -> Void)?
     var onCopy: (() -> Void)?
+    var onCopyAndRemove: (() -> Void)?
     var onRemove: (() -> Void)?
     var onDelivered: (() -> Void)?
 
@@ -144,6 +147,8 @@ final class StackDragNSView: NSView, NSDraggingSource {
                      action: #selector(saveToFolder), keyEquivalent: "").target = self
         menu.addItem(withTitle: String(localized: "Copy"),
                      action: #selector(copyImage), keyEquivalent: "").target = self
+        menu.addItem(withTitle: String(localized: "Copy and Remove"),
+                     action: #selector(copyImageAndRemove), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: String(localized: "Remove"),
                      action: #selector(removeShot), keyEquivalent: "").target = self
@@ -152,6 +157,7 @@ final class StackDragNSView: NSView, NSDraggingSource {
 
     @objc private func saveToFolder() { onSaveToFolder?() }
     @objc private func copyImage() { onCopy?() }
+    @objc private func copyImageAndRemove() { onCopyAndRemove?() }
     @objc private func removeShot() { onRemove?() }
 
     // MARK: - NSDraggingSource

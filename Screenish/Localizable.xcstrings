@@ -234,6 +234,16 @@
         }
       }
     },
+    "Copy and Remove" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kopiera och ta bort"
+          }
+        }
+      }
+    },
     "Copy the image to the clipboard" : {
       "localizations" : {
         "sv" : {
