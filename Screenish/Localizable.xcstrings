@@ -101,6 +101,7 @@
       }
     },
     "Balance" : {
+      "extractionState" : "stale",
       "localizations" : {
         "sv" : {
           "stringUnit" : {
@@ -109,12 +110,6 @@
           }
         }
       }
-    },
-    "Set as default" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Sätt som standard" } } }
-    },
-    "None" : {
-      "localizations" : { "sv" : { "stringUnit" : { "state" : "translated", "value" : "Ingen" } } }
     },
     "Blur" : {
       "localizations" : {
@@ -258,6 +253,9 @@
           }
         }
       }
+    },
+    "Couldn’t save the screenshot" : {
+
     },
     "Counter" : {
       "localizations" : {
@@ -579,6 +577,16 @@
         }
       }
     },
+    "None" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen"
+          }
+        }
+      }
+    },
     "Open editor after capture" : {
       "localizations" : {
         "sv" : {
@@ -858,6 +866,16 @@
         }
       }
     },
+    "Set as default" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sätt som standard"
+          }
+        }
+      }
+    },
     "Settings…" : {
       "localizations" : {
         "sv" : {
@@ -988,6 +1006,9 @@
           }
         }
       }
+    },
+    "The image couldn’t be encoded." : {
+
     },
     "Thickness" : {
       "localizations" : {
