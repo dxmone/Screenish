@@ -3,3 +3,6 @@
 xcuserdata/
 build/
 DerivedData/
+
+# Local scratch screenshot in the repo root — never ship it
+image.png
