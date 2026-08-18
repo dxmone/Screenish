@@ -42,10 +42,14 @@ enum ImageExportError: Error {
 enum ImageExport {
 
     /// Per-launch temp directory holding shots until saved, dragged out, or quit.
+    /// Owner-only (0700): it holds user screenshots — same posture as the drag
+    /// scratch (ShotDrag.dragDirectory), even though $TMPDIR is already per-user.
     static let tempDirectory: URL = {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("Screenish", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(
+            at: dir, withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700])
         return dir
     }()
 
