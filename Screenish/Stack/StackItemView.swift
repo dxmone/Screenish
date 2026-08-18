@@ -56,11 +56,11 @@ struct StackItemView: View {
     @ObservedObject var store: ShotStore
     @State private var hovering = false
 
+    // Every card is the same fixed size — a small capture would otherwise shrink
+    // to a sliver. The image aspect-fits inside (scaled up if needed); any
+    // letterboxing shows the card background.
     private var thumbSize: CGSize {
-        let w = StackMetrics.cardWidth
-        let ratio = shot.pixelSize.height / max(shot.pixelSize.width, 1)
-        let h = min(w * ratio, StackMetrics.maxThumbHeight)
-        return CGSize(width: w, height: h)
+        CGSize(width: StackMetrics.cardWidth, height: StackMetrics.maxThumbHeight)
     }
 
     var body: some View {
