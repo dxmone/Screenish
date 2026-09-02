@@ -172,6 +172,10 @@ final class AppCoordinator {
             },
             onDiscard: { [weak self] in
                 self?.store.remove(shot)   // Esc → throw the shot away
+            },
+            onSaved: { [weak self] in
+                // Saved to the folder → optionally leave the stack (setting).
+                if Prefs.removeAfterSave { self?.store.remove(shot) }
             })
         controller.onClosed = { [weak self] in self?.editors[shot.id] = nil }
         editors[shot.id] = controller

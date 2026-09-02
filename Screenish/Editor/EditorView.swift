@@ -12,6 +12,8 @@ struct EditorView: View {
     var onDone: ([Annotation], CGRect?, BackgroundStyle) -> Void
     var onClose: () -> Void
     var onDiscard: () -> Void = {}
+    /// Called after the image was written to the save folder (after edits are applied).
+    var onSaved: () -> Void = {}
     var onDragWillBegin: () -> Void = {}
     var onDragRestore: () -> Void = {}
     var onDragDelivered: () -> Void = {}
@@ -76,6 +78,7 @@ struct EditorView: View {
             let url = try ImageExport.write(image, to: Prefs.saveLocation)
             NSWorkspace.shared.activateFileViewerSelecting([url])
             done()   // persist edits + close the editor only on success
+            onSaved()
         } catch {
             ShotDrag.presentSaveError(error)   // failed → leave the editor open
         }

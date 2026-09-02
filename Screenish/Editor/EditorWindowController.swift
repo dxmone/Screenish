@@ -14,7 +14,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
 
     init(shot: Shot, onDone: @escaping ([Annotation], CGRect?, BackgroundStyle) -> Void,
          onDragDelivered: @escaping () -> Void = {},
-         onDiscard: @escaping () -> Void = {}) {
+         onDiscard: @escaping () -> Void = {},
+         onSaved: @escaping () -> Void = {}) {
         let document = EditorDocument(shot: shot)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1120, height: 740),
@@ -37,6 +38,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
                 onDiscard()
                 self?.close()
             },
+            onSaved: onSaved,
             onDragDelivered: { [weak self] in
                 onDragDelivered()
                 self?.animateAwayThenClose()

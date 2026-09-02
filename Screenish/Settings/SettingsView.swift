@@ -74,6 +74,7 @@ private struct GeneralSettingsView: View {
     @AppStorage(Prefs.compressJPEGKey) private var compressJPEG: Bool = false
     @AppStorage(Prefs.launchAtLoginKey) private var launchAtLogin: Bool = false
     @AppStorage(Prefs.removeAfterDragKey) private var removeAfterDrag: Bool = false
+    @AppStorage(Prefs.removeAfterSaveKey) private var removeAfterSave: Bool = false
     @AppStorage(Prefs.openEditorAfterCaptureKey) private var openEditorAfterCapture: Bool = true
 
     @State private var language: AppLanguage = .current
@@ -110,6 +111,7 @@ private struct GeneralSettingsView: View {
             Toggle("Always hide window at launch", isOn: $hideAtLaunch)
             Toggle("Compress to JPG when saving", isOn: $compressJPEG)
             Toggle("Remove from stack after drag and drop", isOn: $removeAfterDrag)
+            Toggle("Remove from stack after saving in editor", isOn: $removeAfterSave)
             Toggle("Launch at login", isOn: $launchAtLogin)
                 .onChange(of: launchAtLogin) { _, enabled in
                     LoginItem.set(enabled)

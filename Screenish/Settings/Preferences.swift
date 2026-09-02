@@ -14,6 +14,7 @@ enum Prefs {
     static let compressJPEGKey = "compressJPEG"
     static let launchAtLoginKey = "launchAtLogin"
     static let removeAfterDragKey = "removeAfterDrag"
+    static let removeAfterSaveKey = "removeAfterSave"
     static let openEditorAfterCaptureKey = "openEditorAfterCapture"
     static let defaultBackgroundKey = "defaultBackgroundStyle"
     static let savedPresetsKey = "beautyPresets"
@@ -51,6 +52,11 @@ enum Prefs {
 
     static var removeAfterDrag: Bool {
         UserDefaults.standard.bool(forKey: removeAfterDragKey)
+    }
+
+    /// Drop a shot from the Stack once it has been saved to the folder from the editor.
+    static var removeAfterSave: Bool {
+        UserDefaults.standard.bool(forKey: removeAfterSaveKey)
     }
 
     static var openEditorAfterCapture: Bool {

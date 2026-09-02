@@ -770,6 +770,16 @@
         }
       }
     },
+    "Remove from stack after saving in editor" : {
+      "localizations" : {
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta bort från stacken efter att ha sparat i redigeraren"
+          }
+        }
+      }
+    },
     "Restart required" : {
       "localizations" : {
         "sv" : {
