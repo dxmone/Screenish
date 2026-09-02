@@ -22,10 +22,11 @@ struct SettingsView: View {
         }
         .frame(width: 460)
         // Accessory apps don't auto-activate, so the Settings window can open
-        // behind other apps. Force it front whenever it appears.
+        // behind other apps. Force it front every time it appears.
         .background(WindowAccessor { window in
-            NSApp.activate(ignoringOtherApps: true)
-            window.makeKeyAndOrderFront(nil)
+            NSApp.activate()
+            window.orderFrontRegardless()   // above everything, even if activation is refused
+            window.makeKey()
         })
     }
 }
@@ -53,19 +54,37 @@ enum SettingsWindow {
     }
 }
 
-/// Reaches the hosting NSWindow once SwiftUI has attached it.
+/// Reaches the hosting NSWindow every time SwiftUI attaches the view to one —
+/// on first open and on every reopen after the window was closed. A one-shot
+/// `DispatchQueue.main.async` in `makeNSView` is too early: the Settings scene
+/// attaches its window a tick later, so `view.window` was often still nil.
 private struct WindowAccessor: NSViewRepresentable {
     let onWindow: (NSWindow) -> Void
 
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            if let window = view.window { onWindow(window) }
-        }
+    func makeNSView(context: Context) -> WindowObservingView {
+        let view = WindowObservingView()
+        view.onWindow = onWindow
         return view
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {}
+    func updateNSView(_ nsView: WindowObservingView, context: Context) {
+        nsView.onWindow = onWindow
+    }
+
+    final class WindowObservingView: NSView {
+        var onWindow: ((NSWindow) -> Void)?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard let window else { return }
+            // Defer a tick so the window has finished its initial ordering; otherwise
+            // SwiftUI's own orderFront can land after ours and undo the makeKey.
+            DispatchQueue.main.async { [weak self, weak window] in
+                guard let window, self?.window === window else { return }
+                self?.onWindow?(window)
+            }
+        }
+    }
 }
 
 private struct GeneralSettingsView: View {
