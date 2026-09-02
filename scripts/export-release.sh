@@ -56,7 +56,7 @@ fi
 xcodebuild -project Screenish.xcodeproj -scheme Screenish -configuration Release \
     -derivedDataPath "$DERIVED" \
     CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-    "${SIGN_ARGS[@]}" \
+    ${SIGN_ARGS[@]+"${SIGN_ARGS[@]}"} \
     build
 
 APP="$PWD/$DERIVED/Build/Products/Release/Screenish.app"
