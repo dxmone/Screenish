@@ -11,6 +11,21 @@ Created by Thomas Strömberg with AI coding.
 The two clients mirror each other feature for feature and file for file
 (see `docs/adr/0004-windows-client-wpf-mirror.md`).
 
+## Download & install
+
+Grab the latest build from the [Releases page](https://github.com/dxmone/Screenish/releases/latest).
+
+- **Windows** — download `Screenish-<version>-b<build>.msi` and run it. It installs into
+  `Program FilesScreenish`, adds a Start menu shortcut and upgrades older versions in
+  place. No .NET install is needed. Builds marked `-unsigned` are not code-signed, so
+  SmartScreen shows "Windows protected your PC" — choose **More info → Run anyway**.
+  Silent install for managed PCs: `msiexec /i Screenish-<version>-b<build>.msi /qn`.
+- **macOS** — download `Screenish-<version>-b<build>.zip`, unzip and move `Screenish.app`
+  to Applications. Grant Screen Recording permission on the first capture.
+
+After launch Screenish lives in the notification area (Windows) or the menu bar (macOS):
+press Ctrl+Shift+1 / 2 / 3 to capture an area, a window or the full screen.
+
 ## Features
 
 - **Capture** region / window / full screen via global hotkeys
