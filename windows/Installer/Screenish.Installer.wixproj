@@ -1,0 +1,23 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <!-- Builds Screenish-<version>.msi from a self-contained publish of the app.
+       Normally driven by scripts/export-release.ps1, which publishes the app and
+       passes ProductVersion / PublishDir. -->
+  <PropertyGroup>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <ProductVersion Condition="'$(ProductVersion)' == ''">0.0.0</ProductVersion>
+    <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\build\publish</PublishDir>
+    <OutputName>Screenish-$(ProductVersion)</OutputName>
+    <DefineConstants>ProductVersion=$(ProductVersion);PublishDir=$(PublishDir)</DefineConstants>
+    <!-- ICE61: expected with AllowSameVersionUpgrades. WIX1077: WixShellExecTarget is
+         formatted by the custom action at run time (the documented pattern). -->
+    <SuppressIces>ICE61</SuppressIces>
+    <SuppressSpecificWarnings>1077</SuppressSpecificWarnings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+</Project>

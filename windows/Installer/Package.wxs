@@ -1,0 +1,83 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <!-- Per-machine install into Program Files. The UpgradeCode is the product's
+       permanent identity: never change it, or upgrades stop replacing old versions. -->
+  <Package Name="Screenish"
+           Manufacturer="Thomas Strömberg"
+           Version="$(var.ProductVersion)"
+           UpgradeCode="6C2F0E0B-3D0B-4A55-9B52-7B0F6B7E5A11"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <SummaryInformation Description="Screenish — screenshots, annotation and beautify" />
+
+    <!-- Same-version upgrades allowed: the build number (4th field) is invisible to
+         Windows Installer, so a rebuild of X.Y.Z must still replace the installed one. -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of Screenish is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="AppIcon" SourceFile="..\Screenish\Assets\Screenish.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/dxmone/Screenish" />
+
+    <!-- The tray agent keeps its files locked: close it before replacing/removing them. -->
+    <util:CloseApplication Id="CloseScreenish" Target="Screenish.exe" EndSessionMessage="yes"
+                           RebootPrompt="no" TerminateProcess="0" Timeout="3" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="Screenish" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="StartMenuShortcut" Guid="B0B9B0B4-6E1C-4E6D-9A55-0C2D2B6A7F21">
+        <Shortcut Id="ScreenishShortcut" Name="Screenish"
+                  Description="Screenshots, annotation and beautify"
+                  Target="[INSTALLFOLDER]Screenish.exe" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+        <RegistryValue Root="HKCU" Key="Software\Screenish" Name="StartMenuShortcut"
+                       Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <!-- Everything the self-contained publish produced (app + .NET runtime). -->
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.PublishDir)\**" />
+    </ComponentGroup>
+
+    <Feature Id="Main" Title="Screenish">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+
+    <!-- "Launch at login" is a per-user Run value the app writes itself; take it
+         with us on a real uninstall (not on upgrades). -->
+    <SetProperty Id="WixQuietExecCmdLine" Sequence="execute" Before="RemoveLoginItem"
+                 Value="&quot;[System64Folder]reg.exe&quot; delete HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v Screenish /f" />
+    <CustomAction Id="RemoveLoginItem" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
+                  Execute="immediate" Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="RemoveLoginItem" After="InstallInitialize"
+              Condition="(REMOVE = &quot;ALL&quot;) AND NOT UPGRADINGPRODUCTCODE" />
+    </InstallExecuteSequence>
+
+    <!-- Wizard: welcome → install folder → install → finish (+ optional launch).
+         The licence page of the stock dialog set is skipped. -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <UI>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg"
+               Order="99" Condition="NOT Installed" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="99" />
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+    </UI>
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch Screenish" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <!-- WixShellExec formats this at run time, so a changed install folder is honoured. -->
+    <Property Id="WixShellExecTarget" Value="[INSTALLFOLDER]Screenish.exe" />
+    <CustomAction Id="LaunchApplication" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)"
+                  DllEntry="WixShellExec" Impersonate="yes" />
+
+  </Package>
+</Wix>
