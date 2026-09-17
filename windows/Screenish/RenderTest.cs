@@ -96,6 +96,7 @@ internal static class RenderTest
             WindowStyle = WindowStyle.None,
         };
         Snapshot(card, Path.Combine(directory, "stack-card.png"));
+        Snapshot(new SettingsWindow(), Path.Combine(directory, "settings.png"));
 
         // Capture interop: the screen under the cursor + the window list (no overlay, no UI).
         Save(ScreenGrabber.GrabScreenUnderCursor(), Path.Combine(directory, "screen.png"));

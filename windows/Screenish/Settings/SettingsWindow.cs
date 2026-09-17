@@ -33,7 +33,7 @@ internal sealed class SettingsWindow : Window
 
     private readonly ContentControl _page = new() { Focusable = false };
 
-    private SettingsWindow()
+    internal SettingsWindow()
     {
         Title = Loc.T("Screenish Settings");
         Width = 500;
@@ -183,6 +183,7 @@ internal sealed class ShortcutRecorder : Button
     public ShortcutRecorder(CaptureMode mode)
     {
         _mode = mode;
+        Style = Theme.StyleOf("BaseButton");   // implicit styles skip derived types
         Width = 170;
         ToolTip = Loc.T("Record shortcut");
         ShowCurrent();

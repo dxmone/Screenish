@@ -122,6 +122,7 @@ internal sealed class MenuButton : Button
 
     public MenuButton(Action<ContextMenu> populate, FrameworkElement? icon = null)
     {
+        Style = Theme.StyleOf("BaseButton");   // implicit styles skip derived types
         Focusable = false;
         Padding = new Thickness(8, 3, 6, 3);
         HorizontalContentAlignment = HorizontalAlignment.Stretch;
