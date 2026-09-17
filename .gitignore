@@ -6,3 +6,9 @@ DerivedData/
 
 # Local scratch screenshot in the repo root — never ship it
 image.png
+
+# Windows client (.NET) build output
+bin/
+obj/
+*.user
+.vs/
