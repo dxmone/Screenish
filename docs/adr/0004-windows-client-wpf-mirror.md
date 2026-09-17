@@ -42,6 +42,9 @@ shared, and the result must install "for real" from an MSI.
 ## Consequences
 
 - Both clients carry the same version number; a feature is not done until it exists in both.
+- Windows-only niceties, because a tray icon can hide in the overflow: the very first
+  launch opens Settings once, and launching the app while it is already running brings
+  up Settings instead of doing nothing.
 - Platform differences that remain: no Screen Recording permission step on Windows; the
   "Rounded" text styles fall back to the closest installed rounded font; native crashes
   are not collected (managed exceptions are logged with full stack traces); an unsigned

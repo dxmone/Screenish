@@ -21,6 +21,9 @@ internal static class Prefs
 
     private static JsonObject _root = new();
 
+    /// False until the first save — i.e. on the very first launch for this user.
+    public static bool Exists => File.Exists(FilePath);
+
     public static void Load()
     {
         try

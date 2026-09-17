@@ -26,6 +26,9 @@ internal static class Theme
     {
         app.Resources.MergedDictionaries.Add((ResourceDictionary)Application.LoadComponent(
             new Uri("/Screenish;component/Theme.xaml", UriKind.Relative)));
+        // Tooltips appear almost instantly, like the macOS client (250 ms).
+        System.Windows.Controls.ToolTipService.InitialShowDelayProperty.OverrideMetadata(
+            typeof(FrameworkElement), new FrameworkPropertyMetadata(250));
         Refresh(app);
         SystemEvents.UserPreferenceChanged += (_, e) =>
         {

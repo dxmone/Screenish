@@ -16,6 +16,17 @@ internal static class App
 {
     public static TrayIcon? Tray { get; private set; }
 
+    private const string ShowSettingsSignal = @"Local\Screenish.ShowSettings";
+
+    private static void ListenForSecondLaunch(Application app)
+    {
+        var signal = new EventWaitHandle(false, EventResetMode.AutoReset, ShowSettingsSignal);
+        new Thread(() =>
+        {
+            while (signal.WaitOne()) app.Dispatcher.BeginInvoke(SettingsWindow.Open);
+        }) { IsBackground = true, Name = "second-launch" }.Start();
+    }
+
     [STAThread]
     public static int Main(string[] args)
     {
@@ -28,9 +39,16 @@ internal static class App
         bool owned;
         try { owned = mutex.WaitOne(args.Contains("--relaunch") ? TimeSpan.FromSeconds(8) : TimeSpan.Zero); }
         catch (AbandonedMutexException) { owned = true; }
-        if (!owned) return 0;
+        if (!owned)
+        {
+            // Already running (its tray icon may be tucked into the overflow): ask that
+            // instance to show Settings so launching from the Start menu does something.
+            if (EventWaitHandle.TryOpenExisting(ShowSettingsSignal, out var signal)) signal.Set();
+            return 0;
+        }
 
         Log.InstallCrashHandlers();
+        bool firstRun = !Prefs.Exists;
         Prefs.Load();
         Loc.Init();
 
@@ -48,8 +66,12 @@ internal static class App
         Tray = new TrayIcon();
 
         if (CrashReporter.LastSessionCrashed) Tray.NotifyPreviousCrash();
-        if (!Prefs.HideAtLaunch)
+        // Very first launch: show Settings once so the user sees the app is alive and
+        // where its shortcuts are, even though "hide at launch" defaults to on.
+        if (!Prefs.HideAtLaunch || firstRun)
             app.Dispatcher.BeginInvoke(SettingsWindow.Open, DispatcherPriority.ApplicationIdle);
+        if (firstRun) Prefs.HideAtLaunch = Prefs.HideAtLaunch;   // persist → no longer a first run
+        ListenForSecondLaunch(app);
 
         app.Exit += (_, _) =>
         {
