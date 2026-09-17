@@ -31,7 +31,7 @@ Created by Thomas Strömberg with AI coding.
 ## Build
 
 ```sh
-xcodebuild -project Screenish.xcodeproj -scheme Screenish build
+xcodebuild -project macos/Screenish.xcodeproj -scheme Screenish build
 ```
 
 ## Release
@@ -41,7 +41,7 @@ each release; the build number is the git commit count, injected at build time.
 See `CLAUDE.md` for the full rules.
 
 ```sh
-./scripts/export-release.sh   # Release build → ~/Downloads/Screenish-<version>-b<build>.zip
+./macos/scripts/export-release.sh   # Release build → ~/Downloads/Screenish-<version>-b<build>.zip
 ```
 
 ## Privacy
