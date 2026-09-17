@@ -1,6 +1,7 @@
 # Screenish — Context & Glossary
 
-Screenish is a macOS menu-bar app for screenshots: a blend of Xnapper and CleanShotX.
+Screenish is a menu-bar / tray app for screenshots on macOS and Windows: a blend of
+Xnapper and CleanShotX.
 Capture via global hotkeys, a floating thumbnail stack with drag-out, an annotation
 editor, and Xnapper-style backgrounds/beautify.
 
@@ -21,5 +22,8 @@ This file is a **glossary only** — no implementation details. See `docs/adr/` 
   Editable after creation.
 - **Beautify** / **Background** — the inspector panel in the Editor controlling padding,
   background, corner radius, shadow, and aspect ratio.
-- **Tray** — the menu-bar status item (`MenuBarExtra`). The app has no Dock icon.
+- **Tray** — the menu-bar status item (macOS) or notification-area icon (Windows). The
+  app has no Dock icon / taskbar button.
+- **Client** — one platform's implementation of Screenish (`macos/`, `windows/`). The
+  clients mirror each other; the glossary applies to both.
 - **Save location** — the user's chosen default folder for saved Shots.
