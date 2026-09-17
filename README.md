@@ -16,7 +16,7 @@ The two clients mirror each other feature for feature and file for file
 Grab the latest build from the [Releases page](https://github.com/dxmone/Screenish/releases/latest).
 
 - **Windows** — download `Screenish-<version>-b<build>.msi` and run it. It installs into
-  `Program FilesScreenish`, adds a Start menu shortcut and upgrades older versions in
+  `Program Files\Screenish`, adds a Start menu shortcut and upgrades older versions in
   place. No .NET install is needed. Builds marked `-unsigned` are not code-signed, so
   SmartScreen shows "Windows protected your PC" — choose **More info → Run anyway**.
   Silent install for managed PCs: `msiexec /i Screenish-<version>-b<build>.msi /qn`.
