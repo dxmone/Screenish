@@ -2,10 +2,12 @@
 //  RenderTest.cs
 //  Screenish
 //
-//  Developer smoke test: `Screenish.exe --render-test <dir>` renders every
-//  annotation kind + a beautified composite, and snapshots the editor, settings
-//  and stack UI to PNG files, without touching the screen-capture path. Lets the
-//  renderer and layout be verified headlessly (CI, code review).
+//  Developer checks, no user input needed:
+//    Screenish.exe --render-test <dir>  renders every annotation kind + a beautified
+//        composite and snapshots the editor / stack-card UI to PNG files, plus a raw
+//        screen and window grab, so renderer and layout can be reviewed as images.
+//    Screenish.exe --smoke-test         drives capture → stack → editor → discard and
+//        the selection overlay end to end; the exit code is the number of failures.
 //
 
 using System.Collections.Immutable;
@@ -105,6 +107,73 @@ internal static class RenderTest
 
         Console.WriteLine("render test written to " + directory);
         return 0;
+    }
+
+    /// `--smoke-test`: drives the live pipeline end to end without user input —
+    /// full-screen capture → stack panel → editor → discard, then the selection
+    /// overlay in both modes (cancelled after a moment). The clipboard is left alone.
+    public static int Smoke()
+    {
+        Prefs.Load();
+        Loc.Init();
+        var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        Theme.Apply(app);
+        int failures = 0;
+        void Check(string name, bool ok)
+        {
+            Console.WriteLine((ok ? "ok    " : "FAIL  ") + name);
+            if (!ok) failures++;
+        }
+
+        app.Dispatcher.BeginInvoke(async () =>
+        {
+            try
+            {
+                var coordinator = AppCoordinator.Shared;
+                coordinator.Start();
+                var image = ScreenGrabber.GrabScreenUnderCursor();
+                var shot = coordinator.Store.Add(image);
+                Check("shot added to the stack", coordinator.Store.Shots.Count == 1);
+                Check("stack panel visible", app.Windows.OfType<StackPanelWindow>().Any(w => w.IsVisible));
+
+                coordinator.OpenEditor(shot);
+                await Task.Delay(1200);
+                Check("editor open", app.Windows.OfType<EditorWindow>().Any(w => w.IsVisible));
+                coordinator.DiscardShot(shot);
+                await Task.Delay(300);
+                Check("editor closed with its shot", !app.Windows.OfType<EditorWindow>().Any());
+                Check("stack hidden when empty", !app.Windows.OfType<StackPanelWindow>().Any(w => w.IsVisible));
+
+                foreach (var mode in new[] { OverlayMode.Region, OverlayMode.Window })
+                {
+                    var overlay = new SelectionOverlayController();
+                    var pending = overlay.Present(mode, ScreenGrabber.GrabVirtualScreen());
+                    await Task.Delay(700);
+                    int shown = app.Windows.OfType<OverlayWindow>().Count();
+                    // Every overlay must sit pixel-exact on its monitor, whatever that monitor's DPI.
+                    var screens = System.Windows.Forms.Screen.AllScreens.Select(s => s.Bounds).ToList();
+                    bool exact = app.Windows.OfType<OverlayWindow>().All(w =>
+                    {
+                        Native.GetWindowRect(new System.Windows.Interop.WindowInteropHelper(w).Handle, out var r);
+                        return screens.Contains(new System.Drawing.Rectangle(r.Left, r.Top, r.Width, r.Height));
+                    });
+                    Check($"overlay {mode}: windows match monitor bounds", exact);
+                    overlay.Cancel();
+                    var result = await pending;
+                    Check($"overlay {mode}: one window per monitor ({shown})",
+                          shown == System.Windows.Forms.Screen.AllScreens.Length);
+                    Check($"overlay {mode}: cancel → no result", result.Region == null && result.Window == null);
+                }
+                coordinator.Hotkeys.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Check("no exception: " + ex, false);
+            }
+            app.Shutdown();
+        });
+        app.Run();
+        return failures;
     }
 
     private static void Snapshot(Window window, string path)

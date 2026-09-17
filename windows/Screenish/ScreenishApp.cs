@@ -20,6 +20,7 @@ internal static class App
     public static int Main(string[] args)
     {
         if (args.Length >= 2 && args[0] == "--render-test") return RenderTest.Run(args[1]);
+        if (args.Length >= 1 && args[0] == "--smoke-test") return RenderTest.Smoke();
 
         // One instance per session. A relaunch (language change) waits for the old
         // instance to let go instead of bouncing off it.
