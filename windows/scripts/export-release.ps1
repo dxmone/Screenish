@@ -21,9 +21,12 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot          # ...\windows
 Set-Location $root
 
-$dotnet = (Get-Command dotnet -ErrorAction SilentlyContinue).Source
-if (-not $dotnet) { $dotnet = Join-Path $env:USERPROFILE '.dotnet\dotnet.exe' }
-if (-not (Test-Path $dotnet)) { throw 'dotnet SDK not found. Install the .NET 8 SDK.' }
+# The first dotnet on PATH may be a runtime-only host (no SDK); pick one that can build.
+$dotnet = @((Get-Command dotnet -ErrorAction SilentlyContinue).Source,
+            (Join-Path $env:USERPROFILE '.dotnet\dotnet.exe'),
+            (Join-Path $env:ProgramFiles 'dotnet\dotnet.exe')) |
+    Where-Object { $_ -and (Test-Path $_) -and (& $_ --list-sdks 2>$null) } | Select-Object -First 1
+if (-not $dotnet) { throw 'dotnet SDK not found. Install the .NET 8 SDK.' }
 
 if (git status --porcelain) {
     Write-Warning 'uncommitted changes - build number reflects committed history only'
