@@ -137,7 +137,14 @@ internal static class CrashReporter
     private static void PromotePreviousSessionIfCrashed()
     {
         if (!File.Exists(SessionPath)) return;
-        var previous = File.ReadAllText(SessionPath);
+        // A quick relaunch can overlap the old instance's teardown, which still holds
+        // the file open for writing; a plain ReadAllText would hit a sharing violation
+        // and silently disable logging for the whole new session.
+        string previous;
+        using (var stream = new FileStream(SessionPath, FileMode.Open, FileAccess.Read,
+                                           FileShare.ReadWrite | FileShare.Delete))
+        using (var reader = new StreamReader(stream, Encoding.UTF8))
+            previous = reader.ReadToEnd();
         if (previous.Length == 0 || !previous.Contains(CrashSentinel)) return;
 
         LastSessionCrashed = true;

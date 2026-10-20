@@ -136,6 +136,18 @@ internal static class RenderTest
                 var shot = coordinator.Store.Add(image);
                 Check("shot added to the stack", coordinator.Store.Shots.Count == 1);
                 Check("stack panel visible", app.Windows.OfType<StackPanelWindow>().Any(w => w.IsVisible));
+                await Task.Delay(200);   // let any DPI change from the initial placement settle
+                var panel = app.Windows.OfType<StackPanelWindow>().First();
+                var panelHwnd = new System.Windows.Interop.WindowInteropHelper(panel).Handle;
+                Native.GetWindowRect(panelHwnd, out var panelRect);
+                var primaryWork = System.Windows.Forms.Screen.PrimaryScreen!.WorkingArea;
+                Check($"stack panel inside the primary work area ({panelRect.Left},{panelRect.Top} " +
+                      $"{panelRect.Width}x{panelRect.Height} in {primaryWork})",
+                      primaryWork.Contains(new System.Drawing.Rectangle(
+                          panelRect.Left, panelRect.Top, panelRect.Width, panelRect.Height)));
+                Check("stack panel is topmost",
+                      (Native.GetWindowLongPtr(panelHwnd, Native.GWL_EXSTYLE).ToInt64() & Native.WS_EX_TOPMOST) != 0);
+                Check("stack panel is visible on screen", Native.IsWindowVisible(panelHwnd));
 
                 coordinator.OpenEditor(shot);
                 await Task.Delay(1200);

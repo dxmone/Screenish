@@ -15,6 +15,9 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Shapes;
+using System.Windows.Threading;
+using Microsoft.Win32;
+using Forms = System.Windows.Forms;
 
 namespace Screenish;
 
@@ -31,27 +34,78 @@ internal static class StackMetrics
 internal sealed class StackController
 {
     private readonly ShotStore _store;
-    private readonly StackPanelWindow _panel;
+    private StackPanelWindow? _panel;
 
     public StackController(ShotStore store)
     {
         _store = store;
-        _panel = new StackPanelWindow(store);
         store.Changed += Update;
+        // Monitors coming and going (dock, sleep, lock screen) can leave a layered WPF
+        // window on a stale DPI / off-screen position that never recovers. Throw the
+        // panel away and build a fresh one once the desktop has settled.
+        SystemEvents.DisplaySettingsChanged += (_, _) =>   // raised on a worker thread
+        {
+            if (Interlocked.Exchange(ref _recreatePending, 1) == 1) return;   // coalesce bursts
+            Application.Current.Dispatcher.BeginInvoke(() =>
+            {
+                _recreatePending = 0;
+                Recreate("display settings changed");
+            }, DispatcherPriority.ApplicationIdle);
+        };
     }
+
+    private int _recreatePending;
 
     private void Update()
     {
         if (_store.Shots.Count == 0)
         {
-            _panel.Hide();
+            _panel?.Hide();
+            return;
         }
-        else
+        try
         {
-            _panel.Rebuild();
-            if (!_panel.IsVisible) _panel.Show();
-            _panel.RefreshLayout();
+            Present();
         }
+        catch (Exception ex)
+        {
+            // Never let a broken panel window hide the stack for the rest of the session.
+            Log.Error($"stack panel failed to show, rebuilding it: {ex.Message}");
+            Discard();
+            Present();
+        }
+    }
+
+    private void Present()
+    {
+        var panel = Panel();
+        panel.Rebuild();
+        if (!panel.IsVisible) panel.Show();
+        panel.RefreshLayout();
+    }
+
+    /// The live panel window; a fresh one if there is none or the old one was closed.
+    private StackPanelWindow Panel()
+    {
+        if (_panel is { IsClosed: false }) return _panel;
+        _panel = new StackPanelWindow(_store);
+        return _panel;
+    }
+
+    private void Recreate(string reason)
+    {
+        if (_panel == null) return;
+        Log.Breadcrumb($"stack panel recreated: {reason}");
+        Discard();
+        if (_store.Shots.Count > 0) Present();
+    }
+
+    /// Close the current panel window; the next Present() builds a fresh one.
+    private void Discard()
+    {
+        var old = _panel;
+        _panel = null;
+        try { old?.Close(); } catch { }
     }
 }
 
@@ -60,9 +114,13 @@ internal sealed class StackPanelWindow : Window
     private readonly ShotStore _store;
     private readonly ScrollViewer _scroll;
 
+    /// A closed WPF window can never be shown again; the controller replaces it.
+    public bool IsClosed { get; private set; }
+
     public StackPanelWindow(ShotStore store)
     {
         _store = store;
+        Closed += (_, _) => IsClosed = true;
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
         Background = Brushes.Transparent;
@@ -85,6 +143,8 @@ internal sealed class StackPanelWindow : Window
         // Never take focus from the app the user is working in; stay out of Alt+Tab.
         SourceInitialized += (_, _) => Native.AddExStyle(new WindowInteropHelper(this).Handle,
             Native.WS_EX_NOACTIVATE | Native.WS_EX_TOOLWINDOW);
+        // Landing on a monitor with another DPI makes WPF rescale + move the window; re-pin it.
+        DpiChanged += (_, _) => Dispatcher.BeginInvoke(() => { if (IsVisible) RefreshLayout(); });
     }
 
     public void Rebuild()
@@ -124,17 +184,32 @@ internal sealed class StackPanelWindow : Window
         _scroll.Content = content;
     }
 
+    /// Pin the panel to the bottom-left of the primary screen's work area and keep it
+    /// topmost. Everything is done in physical pixels straight against the window
+    /// handle: WPF's Left/Top go through its cached SystemParameters and the DPI the
+    /// window happened to be created with, which drifted off-screen after monitor
+    /// changes. Call after Show() — the window must have a handle.
     public void RefreshLayout()
     {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero || IsClosed) return;
+
         // Always the primary screen: the stack must not follow whatever app has focus.
-        var work = SystemParameters.WorkArea;
-        double maxHeight = work.Height - StackMetrics.Margin * 2;
+        var work = Forms.Screen.PrimaryScreen?.WorkingArea ?? Forms.Screen.AllScreens[0].WorkingArea;
+        var dpi = VisualTreeHelper.GetDpi(this);
+        double maxHeight = work.Height / dpi.DpiScaleY - StackMetrics.Margin * 2;
 
         var content = (FrameworkElement)_scroll.Content;
         content.Measure(new Size(Width, double.PositiveInfinity));
-        Height = Math.Min(content.DesiredSize.Height, maxHeight);
-        Left = work.Left + StackMetrics.Margin;
-        Top = work.Bottom - StackMetrics.Margin - Height;
+        Height = Math.Max(1, Math.Min(content.DesiredSize.Height, maxHeight));
+
+        int width = (int)Math.Round(Width * dpi.DpiScaleX), height = (int)Math.Round(Height * dpi.DpiScaleY);
+        int x = work.Left + (int)Math.Round(StackMetrics.Margin * dpi.DpiScaleX);
+        int y = work.Bottom - (int)Math.Round(StackMetrics.Margin * dpi.DpiScaleY) - height;
+        Native.SetWindowPos(hwnd, Native.HWND_TOPMOST, x, y, width, height,
+                            Native.SWP_NOACTIVATE | Native.SWP_SHOWWINDOW);
+        Log.Breadcrumb($"stack: {_store.Shots.Count} shot(s) at ({x},{y}) {width}x{height}px, " +
+                       $"dpi {dpi.PixelsPerInchX:0}, work area {work}");
     }
 }
 
