@@ -21,7 +21,7 @@
 
     <!-- App version (semver X.Y.Z): bumped by hand before each release, kept in
          step with MARKETING_VERSION of the macOS client. See CLAUDE.md. -->
-    <Version>1.3.0</Version>
+    <Version>1.3.1</Version>
     <!-- Build number = git commit count, injected by scripts/export-release.ps1
          (-p:BuildNumber=N). The placeholder 1 only applies to plain dev builds. -->
     <BuildNumber Condition="'$(BuildNumber)' == ''">1</BuildNumber>
