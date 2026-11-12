@@ -128,6 +128,7 @@ final class StackDragNSView: NSView, NSDraggingSource {
         item.setDraggingFrame(NSRect(origin: origin, size: thumb.size), contents: thumb)
 
         Log.drag.log("stack begin drag session: \(url.lastPathComponent, privacy: .public)")
+        ShotDrag.retainDuringDrag(self)
         beginDraggingSession(with: [item], event: event, source: self)
     }
 
@@ -172,11 +173,13 @@ final class StackDragNSView: NSView, NSDraggingSource {
         // Don't delete the dragged file here. Path-referencing targets (Terminal, shell
         // prompts) only capture the file's path during the drag and read it later, so the
         // file must outlive the drag. It's swept at next launch (sweepDragDirectory).
-        if operation.isEmpty {
-            Log.drag.log("stack drag cancelled")
-        } else {
-            Log.drag.log("stack drag delivered: \(operation.rawValue)")
-            onDelivered?()
+        // onDelivered may remove the shot (removeAfterDrag), which destroys this view
+        // and possibly hides the panel — defer it so AppKit finishes the session first.
+        let delivered = !operation.isEmpty
+        Log.drag.log("stack drag \(delivered ? "delivered" : "cancelled", privacy: .public): \(operation.rawValue)")
+        let onDelivered = self.onDelivered
+        ShotDrag.finishDrag(self) {
+            if delivered { onDelivered?() }
         }
     }
 }

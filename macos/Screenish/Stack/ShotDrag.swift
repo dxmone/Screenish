@@ -56,6 +56,29 @@ enum ShotDrag {
 
     private static let fm = FileManager.default
 
+    // MARK: - In-flight drag sources
+
+    /// Drag sources with a session in flight, held strongly so the source outlives
+    /// its session even if SwiftUI tears down the card / the editor window closes
+    /// mid-drag. A session whose source vanishes before AppKit finishes it leaves
+    /// AppKit stuck ("Cannot start a new drag. A previous drag has not finished.")
+    /// and every later drag in the process silently fails.
+    @MainActor private static var liveSources: [ObjectIdentifier: NSDraggingSource] = [:]
+
+    @MainActor static func retainDuringDrag(_ source: NSDraggingSource) {
+        liveSources[ObjectIdentifier(source)] = source
+    }
+
+    /// Run a drag's end-of-session work (remove the shot, close the editor, …) on
+    /// the NEXT main-loop turn, so AppKit fully finishes the session before the
+    /// source view or its window is torn down; then release the source.
+    @MainActor static func finishDrag(_ source: NSDraggingSource, _ work: @escaping @MainActor () -> Void) {
+        DispatchQueue.main.async {
+            work()
+            liveSources[ObjectIdentifier(source)] = nil
+        }
+    }
+
     /// Save a shot to a folder with its user-facing name + format. Throws so the
     /// caller can alert the user instead of silently reporting success.
     @discardableResult

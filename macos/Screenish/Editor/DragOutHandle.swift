@@ -48,6 +48,7 @@ final class DragSourceNSView: NSView, NSDraggingSource {
     var onCancelled: (() -> Void)?
 
     private var mouseDownPoint: NSPoint = .zero
+    private var didDrag = false
 
     private let label = NSTextField(labelWithString: "")
     private let icon = NSImageView()
@@ -88,11 +89,16 @@ final class DragSourceNSView: NSView, NSDraggingSource {
 
     override func mouseDown(with event: NSEvent) {
         mouseDownPoint = convert(event.locationInWindow, from: nil)
+        didDrag = false
     }
 
     override func mouseDragged(with event: NSEvent) {
+        // One drag attempt per gesture: if a session can't start, retrying on every
+        // mouseDragged would write a fresh scratch file per event.
+        guard !didDrag else { return }
         let p = convert(event.locationInWindow, from: nil)
         guard hypot(p.x - mouseDownPoint.x, p.y - mouseDownPoint.y) > 3 else { return }
+        didDrag = true
         startDrag(with: event)
     }
 
@@ -124,6 +130,7 @@ final class DragSourceNSView: NSView, NSDraggingSource {
         item.setDraggingFrame(NSRect(origin: origin, size: thumb.size), contents: thumb)
 
         Log.breadcrumb("drag begin: \(url.lastPathComponent)")
+        ShotDrag.retainDuringDrag(self)
         beginDraggingSession(with: [item], event: event, source: self)
     }
 
@@ -151,12 +158,13 @@ final class DragSourceNSView: NSView, NSDraggingSource {
         // Don't delete the dragged file here. Path-referencing targets (Terminal, shell
         // prompts) only capture the file's path during the drag and read it later, so the
         // file must outlive the drag. It's swept at next launch (sweepDragDirectory).
-        if operation.isEmpty {
-            Log.breadcrumb("drag cancelled")
-            onCancelled?()
-        } else {
-            Log.breadcrumb("drag delivered: \(operation.rawValue)")
-            onDelivered?()
+        // onDelivered closes the editor window (and may remove the shot) — defer both
+        // callbacks so AppKit finishes the session before the source is torn down.
+        let delivered = !operation.isEmpty
+        Log.breadcrumb(delivered ? "drag delivered: \(operation.rawValue)" : "drag cancelled")
+        let onDelivered = self.onDelivered, onCancelled = self.onCancelled
+        ShotDrag.finishDrag(self) {
+            if delivered { onDelivered?() } else { onCancelled?() }
         }
     }
 }
